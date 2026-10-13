@@ -1,69 +1,116 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import Link from "next/link";
+import { AttendanceControls } from "@/components/attendance-controls";
+import { LoginForm } from "@/components/login-form";
+import { StatCard, WorkBadge } from "@/components/ui";
+import { fullName } from "@/lib/labels";
+import { dashboardStats, handledToday, lastMessage } from "@/lib/metrics";
+import { useCrm } from "@/lib/store";
+import { formatDuration, formatMinutes, formatTime } from "@/lib/time";
+
+export default function HomePage() {
+  const crm = useCrm();
+  if (!crm.ready) return <p className="text-[#828b95]">Загрузка...</p>;
+  if (!crm.user) return <LoginForm />;
+  return crm.isAdmin ? <AdminHome /> : <DispatcherHome />;
+}
+
+function AdminHome() {
+  const crm = useCrm();
+  const stats = dashboardStats(crm.state, crm.now);
+  const rows = stats.people.filter((item) => item.user.role === "dispatcher");
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="space-y-3">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Сотрудники" value={String(stats.employees)} />
+        <StatCard label="На работе" value={String(stats.working)} />
+        <StatCard label="Отошли" value={String(stats.away)} />
+        <StatCard label="Смена закрыта" value={String(stats.finished)} />
+        <StatCard label="Обращения сегодня" value={String(stats.incoming)} />
+        <StatCard label="Сообщения сегодня" value={String(stats.messages)} />
+        <StatCard label="Первый ответ" value={formatMinutes(stats.avgResponse)} hint="По новым обращениям за сегодня" />
+        <StatCard label="WhatsApp" value={String(stats.connections)} hint="API не подключён" />
+      </div>
+      <section className="crm-panel px-3 py-2">
+        <h2 className="py-1 font-semibold">Источники за сегодня</h2>
+        {stats.sources.length === 0 ? <p className="py-2 text-[#828b95]">Сегодня обращений нет</p> : (
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {stats.sources.map((source) => (
+              <div key={source.source} className="flex items-baseline justify-between border-t border-[#eef1f4] py-1.5">
+                <span>{source.label}</span>
+                <span className="text-[#828b95]">{source.count} · {source.share}%</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+      <div className="crm-panel overflow-x-auto">
+        <table className="w-full min-w-[880px] text-left">
+          <thead className="bg-[#f7f9fb] text-[#525c69]">
+            <tr>
+              {["Сотрудник", "Статус", "Начало", "Отход", "Конец", "Время", "Закрыто", ""].map((title) => (
+                <th key={title} className="px-3 py-2 font-medium">{title}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(({ user, summary }) => (
+              <tr key={user.id} className="border-t border-[#eef1f4] hover:bg-[#f7fafc]">
+                <td className="px-3 py-2">{fullName(user)}</td>
+                <td className="px-3 py-2"><WorkBadge status={summary.status} /></td>
+                <td className="px-3 py-2">{summary.arrivedAt ? formatTime(summary.arrivedAt) : "—"}</td>
+                <td className="px-3 py-2">{summary.lastAwayAt ? formatTime(summary.lastAwayAt) : "—"}</td>
+                <td className="px-3 py-2">{summary.finishedAt ? formatTime(summary.finishedAt) : "—"}</td>
+                <td className="px-3 py-2">{formatDuration(summary.workedMs)}</td>
+                <td className="px-3 py-2">{handledToday(crm.state, user.id, crm.now)}</td>
+                <td className="px-3 py-2">
+                  <Link className="crm-link" href={`/profile?user=${user.id}`}>Профиль</Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function DispatcherHome() {
+  const crm = useCrm();
+  const user = crm.user;
+  if (!user) return null;
+  const mine = crm.state.conversations.filter((conversation) => conversation.assigneeId === user.id);
+  const open = mine.filter((conversation) => conversation.status !== "done");
+
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-2 sm:grid-cols-3">
+        <StatCard label="Открытые обращения" value={String(open.length)} />
+        <StatCard label="Закрыто сегодня" value={String(handledToday(crm.state, user.id, crm.now))} />
+        <StatCard label="Непрочитанные" value={String(mine.reduce((sum, conversation) => sum + conversation.unread, 0))} />
+      </div>
+      <AttendanceControls userId={user.id} />
+      <section className="crm-panel">
+        <div className="flex items-center justify-between border-b border-[#eef1f4] px-3 py-2">
+          <h2 className="font-semibold">Открытые чаты</h2>
+          <Link href="/chats" className="crm-link">Все чаты</Link>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+        {open.length === 0 ? <p className="px-3 py-3 text-[#828b95]">Открытых обращений нет</p> : open.map((conversation) => {
+          const customer = crm.state.customers.find((item) => item.id === conversation.customerId);
+          const message = lastMessage(crm.state.messages, conversation.id);
+          return (
+            <Link key={conversation.id} href={`/chats?chat=${conversation.id}`} className="flex items-center justify-between border-t border-[#eef1f4] px-3 py-2 hover:bg-[#f7fafc]">
+              <span>
+                <span className="block">{customer?.name}</span>
+                <span className="block text-[#828b95]">{message?.text ?? "Нет сообщений"}</span>
+              </span>
+              <span className="text-xs text-[#828b95]">{message ? formatTime(message.at) : ""}</span>
+            </Link>
+          );
+        })}
+      </section>
     </div>
   );
 }
