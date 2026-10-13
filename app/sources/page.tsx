@@ -21,14 +21,14 @@ export default function SourcesPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex rounded-xl bg-white p-1 w-fit">
+      <div className="flex rounded-[10px] bg-white p-1 w-fit">
         {(["day", "week", "month"] as PeriodKind[]).map((item) => (
           <button key={item} className={`rounded-lg px-3 py-2 text-sm font-semibold ${period === item ? "bg-[#2e6db4] text-white" : "text-[#525c69]"}`} onClick={() => setPeriod(item)} type="button">
             {item === "day" ? "День" : item === "week" ? "Неделя" : "Месяц"}
           </button>
         ))}
       </div>
-      <p className="text-sm text-[#6b6560]">Источник берётся из канала или метки. Если данных нет, стоит «Не определён». Рекламная кампания не подставляется к WhatsApp без метки.</p>
+      <p className="text-sm text-[#667085]">Источник берётся из канала или метки. Если данных нет, стоит «Не определён». Рекламная кампания не подставляется к WhatsApp без метки.</p>
       {current.length === 0 ? <Empty title="Обращений нет" text="За этот период источники не зафиксированы." /> : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {current.map((row) => {
@@ -36,9 +36,9 @@ export default function SourcesPage() {
             const delta = row.count - prev;
             return (
               <article key={row.source} className="crm-panel p-4">
-                <p className="text-sm text-[#6b6560]">{row.label}</p>
+                <p className="text-sm text-[#667085]">{row.label}</p>
                 <p className="mt-1 text-3xl font-semibold">{row.count}</p>
-                <p className="text-sm text-[#6b6560]">{row.share}% всех обращений · к прошлому периоду {delta > 0 ? `+${delta}` : delta}</p>
+                <p className="text-sm text-[#667085]">{row.share}% всех обращений · к прошлому периоду {delta > 0 ? `+${delta}` : delta}</p>
                 <p className="mt-2 text-sm">Обработано: {row.processed}</p>
                 <p className="text-sm">Без ответа: {row.unanswered}</p>
               </article>
@@ -53,7 +53,7 @@ export default function SourcesPage() {
       </div>
       <div className="overflow-x-auto crm-panel">
         <table className="w-full min-w-[760px] text-left text-sm">
-          <thead className="bg-[#faf8f4] text-[#6b6560]">
+          <thead className="bg-[#f7f8fa] text-[#667085]">
             <tr>
               {["Когда", "Клиент", "Источник", "Диспетчер", "Статус", "Первое сообщение"].map((title) => (
                 <th key={title} className="px-4 py-3 font-medium">{title}</th>
@@ -66,7 +66,7 @@ export default function SourcesPage() {
               const assignee = crm.state.users.find((item) => item.id === conversation.assigneeId);
               const first = crm.state.messages.filter((message) => message.conversationId === conversation.id).sort((a, b) => a.at.localeCompare(b.at))[0];
               return (
-                <tr key={conversation.id} className="border-t border-[#f3eee6]">
+                <tr key={conversation.id} className="border-t border-[#e8eaee]">
                   <td className="px-4 py-3">{formatDateTime(conversation.createdAt)}</td>
                   <td className="px-4 py-3">{customer?.name}</td>
                   <td className="px-4 py-3">{SOURCE_LABEL[conversation.source]}{conversation.sourceDetail ? ` · ${conversation.sourceDetail}` : ""}</td>

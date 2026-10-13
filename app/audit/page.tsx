@@ -17,10 +17,9 @@ export default function AuditPage() {
     if (action !== "all" && entry.action !== action) return false;
     return true;
   });
-
   return (
     <div className="space-y-4">
-      <p className="text-sm text-[#6b6560]">Журнал только для чтения. Обычные сотрудники не могут его менять.</p>
+      <p className="text-sm text-[#667085]">Журнал только для чтения. Обычные сотрудники не могут его менять.</p>
       <div className="flex flex-wrap gap-2">
         <select className={`${controlClass} w-auto`} value={actorId} onChange={(event) => setActorId(event.target.value)}>
           <option value="all">Все пользователи</option>
@@ -34,7 +33,7 @@ export default function AuditPage() {
       {rows.length === 0 ? <Empty title="Записей нет" text="По фильтру журнал пуст." /> : (
         <div className="overflow-x-auto crm-panel">
           <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="bg-[#faf8f4] text-[#6b6560]">
+            <thead className="bg-[#f7f8fa] text-[#667085]">
               <tr>
                 {["Когда", "Кто", "Действие", "Объект"].map((title) => <th key={title} className="px-4 py-3 font-medium">{title}</th>)}
               </tr>
@@ -43,7 +42,7 @@ export default function AuditPage() {
               {rows.map((entry) => {
                 const actor = crm.state.users.find((user) => user.id === entry.actorId);
                 return (
-                  <tr key={entry.id} className="border-t border-[#f3eee6]">
+                  <tr key={entry.id} className="border-t border-[#e8eaee]">
                     <td className="px-4 py-3 whitespace-nowrap">{formatDateTime(entry.at)}</td>
                     <td className="px-4 py-3">{actor ? fullName(actor) : "Система"}</td>
                     <td className="px-4 py-3 font-medium">{entry.action}</td>

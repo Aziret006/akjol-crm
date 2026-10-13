@@ -22,6 +22,25 @@ export function isoAt(date: string, time: string) {
   return new Date(`${date}T${time}:00+06:00`).toISOString();
 }
 
+export function isoFromDateTimeLocal(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return null;
+  return new Date(`${value}:00+06:00`).toISOString();
+}
+
+export function toDateTimeLocal(iso: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(iso));
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}`;
+}
+
 export function formatTime(iso: string) {
   return new Intl.DateTimeFormat("ru-RU", {
     timeZone: TZ,

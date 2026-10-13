@@ -1,3 +1,4 @@
+import { demoDrivers } from "./drivers";
 import type { AttendanceEvent, AttendanceType, Conversation, CrmState, Message, User } from "./types";
 import { addDays, bishkekDateString, isoAt } from "./time";
 
@@ -372,6 +373,9 @@ export function createSeed(): CrmState {
         at: ago(270),
       },
     ],
+    drivers: demoDrivers(),
+    orders: [],
+    orderEvents: [],
     audit: [
       {
         id: "audit-seed-1",

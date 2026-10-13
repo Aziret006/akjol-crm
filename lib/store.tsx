@@ -1,15 +1,26 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { allows, type Permission } from "./access";
 import { currentStatus, nextEventType, openShift } from "./attendance";
-import { fullName, SOURCE_LABEL } from "./labels";
+import { demoDrivers } from "./drivers";
+import { fullName, ORDER_HOLD_LABEL, ORDER_SOURCE_LABEL, ORDER_STATUS_LABEL, SOURCE_LABEL } from "./labels";
+import { canAssignDriver, canSeeOrder, findCustomerByPhone, nextOrderNumber, normalizeOrder, similarOpenOrder, STATUS_TRANSITIONS } from "./orders";
 import { createSeed } from "./seed";
-import { isoAt, sha256 } from "./time";
+import { formatDateTime, isoAt, sha256 } from "./time";
 import type {
   AccountStatus,
   ActionResult,
   AttendanceType,
   CrmState,
+  DriverAvailability,
+  Order,
+  OrderEvent,
+  OrderHold,
+  OrderPriority,
+  OrderSource,
+  OrderStatus,
+  PaymentMethod,
   RequestStatus,
   Role,
   SourceKind,
@@ -17,6 +28,7 @@ import type {
 } from "./types";
 
 const STORAGE_KEY = "akjol-crm-frontend-v1";
+let keepStoredState = false;
 
 const EMPTY_STATE: CrmState = {
   version: 1,
@@ -29,7 +41,29 @@ const EMPTY_STATE: CrmState = {
   sourceChanges: [],
   notes: [],
   audit: [],
+  drivers: [],
+  orders: [],
+  orderEvents: [],
   session: null,
+};
+
+export type OrderInput = {
+  phone: string;
+  name: string;
+  pickup: string;
+  dropoff: string;
+  pickupAt: string | null;
+  comment: string;
+  passengers: number | null;
+  payment: PaymentMethod | null;
+  price: number | null;
+  source: OrderSource;
+  driverId: string | null;
+  vehicleNote: string;
+  conversationId: string | null;
+  callId: string | null;
+  idempotencyKey: string;
+  confirmDuplicate: boolean;
 };
 
 export type UserInput = {
@@ -68,6 +102,13 @@ type CrmApi = {
   setSource: (conversationId: string, source: SourceKind, reason: string) => ActionResult;
   addNote: (conversationId: string, text: string) => ActionResult;
   markRead: (conversationId: string) => void;
+  createOrder: (input: OrderInput) => ActionResult;
+  setOrderStatus: (orderId: string, status: OrderStatus, reason?: string) => ActionResult;
+  assignOrderDriver: (orderId: string, driverId: string | null) => ActionResult;
+  setOrderAttention: (orderId: string, hold: OrderHold | null, callbackAt: string | null, priority: OrderPriority) => ActionResult;
+  reopenOrder: (orderId: string, reason: string) => ActionResult;
+  reassignOrderDispatcher: (orderId: string, dispatcherId: string) => ActionResult;
+  setDriverAvailability: (driverId: string, availability: DriverAvailability) => ActionResult;
   resetDemo: () => void;
 };
 
@@ -77,8 +118,13 @@ function ok(): ActionResult {
   return { ok: true };
 }
 
-function fail(error: string, code?: "confirm-finish"): ActionResult {
+function fail(error: string, code?: "confirm-finish" | "duplicate-order"): ActionResult {
   return { ok: false, error, code };
+}
+
+function deny(actor: User | null, viewing: boolean, permission: Permission) {
+  if (!actor || viewing || !allows(actor.role, permission)) return "Недостаточно прав";
+  return null;
 }
 
 function uid() {
@@ -108,8 +154,14 @@ function loadState(): CrmState {
     if (!raw) return createSeed();
     const parsed = JSON.parse(raw) as CrmState;
     if (parsed.version !== 1 || !Array.isArray(parsed.users) || parsed.users.length === 0) return createSeed();
-    return parsed;
+    return {
+      ...parsed,
+      drivers: Array.isArray(parsed.drivers) ? parsed.drivers : demoDrivers(),
+      orders: Array.isArray(parsed.orders) ? parsed.orders.map((order) => normalizeOrder(order)) : [],
+      orderEvents: Array.isArray(parsed.orderEvents) ? parsed.orderEvents : [],
+    };
   } catch {
+    keepStoredState = true;
     return createSeed();
   }
 }
@@ -119,18 +171,27 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
   const [now, setNow] = useState(0);
   const [ready, setReady] = useState(false);
   const stateRef = useRef<CrmState>(EMPTY_STATE);
-  stateRef.current = state;
+  useEffect(() => {
+    stateRef.current = state;
+  });
 
   useEffect(() => {
-    setState(loadState());
-    setNow(Date.now());
-    setReady(true);
+    try {
+      setState(loadState());
+      setNow(Date.now());
+    } finally {
+      setReady(true);
+    }
     const timer = window.setInterval(() => setNow(Date.now()), 15000);
     return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
     if (!ready) return;
+    if (keepStoredState) {
+      keepStoredState = false;
+      return;
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [ready, state]);
 
@@ -586,6 +647,329 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
         });
         return ok();
       },
+      createOrder(input) {
+        const current = requireState();
+        const denied = deny(actor, viewing, "orders.create");
+        if (denied || !actor) return fail(denied ?? "Недостаточно прав");
+        const key = input.idempotencyKey.trim();
+        if (!key) return fail("Не удалось сохранить заказ. Откройте форму ещё раз.");
+        const existingKey = current.orders.find((order) => order.idempotencyKey === key);
+        if (existingKey) return { ok: true, orderId: existingKey.id };
+        const phone = input.phone.trim();
+        const pickup = input.pickup.trim();
+        if (phone.replace(/\D/g, "").length < 6) return fail("Укажите телефон клиента");
+        if (pickup.length < 3) return fail("Укажите адрес подачи");
+        if (input.passengers != null && (!Number.isInteger(input.passengers) || input.passengers < 1 || input.passengers > 8)) {
+          return fail("Количество пассажиров: от 1 до 8");
+        }
+        if (input.price != null && (!Number.isFinite(input.price) || input.price < 0)) return fail("Стоимость указана неверно");
+        const driver = input.driverId ? current.drivers.find((item) => item.id === input.driverId) ?? null : null;
+        if (input.driverId && !driver) return fail("Водитель не найден");
+        if (driver && !canAssignDriver(current.orders, driver, "")) return fail("Этот водитель занят или не на линии");
+        if (!input.confirmDuplicate) {
+          const similar = similarOpenOrder(current.orders, current.customers, phone, pickup);
+          if (similar) {
+            return fail(`Похожий заказ №${similar.number} уже открыт`, "duplicate-order");
+          }
+        }
+        const matched = findCustomerByPhone(current.customers, phone);
+        const customer = matched ?? {
+          id: uid(),
+          name: input.name.trim() || "Клиент",
+          phone,
+          city: "Бишкек",
+        };
+        const nowIso = new Date().toISOString();
+        const orderId = uid();
+        const status: OrderStatus = driver ? "assigned" : "awaiting_driver";
+        const order: Order = {
+          id: orderId,
+          number: nextOrderNumber(current.orders),
+          customerId: customer.id,
+          pickup,
+          dropoff: input.dropoff.trim(),
+          pickupAt: input.pickupAt,
+          comment: input.comment.trim(),
+          passengers: input.passengers,
+          payment: input.payment,
+          price: input.price,
+          source: input.source,
+          status,
+          driverId: driver?.id ?? null,
+          dispatcherId: actor.id,
+          conversationId: input.conversationId,
+          cancelReason: "",
+          callId: input.callId,
+          priority: "normal",
+          hold: null,
+          callbackAt: null,
+          vehicleNote: input.vehicleNote.trim(),
+          idempotencyKey: key,
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        };
+        const events: OrderEvent[] = [
+          {
+            id: uid(),
+            orderId,
+            actorId: actor.id,
+            kind: "created",
+            detail: `Заказ создан. Источник: ${ORDER_SOURCE_LABEL[input.source]}`,
+            at: nowIso,
+          },
+        ];
+        if (driver) {
+          events.push({
+            id: uid(),
+            orderId,
+            actorId: actor.id,
+            kind: "assigned",
+            detail: `Назначен водитель ${fullName(driver)}`,
+            at: nowIso,
+          });
+        }
+        setState(
+          withAudit(
+            {
+              ...current,
+              customers: matched ? current.customers : [customer, ...current.customers],
+              orders: [order, ...current.orders],
+              orderEvents: [...events.reverse(), ...current.orderEvents],
+            },
+            actor.id,
+            "Заказ создан",
+            `№${order.number}, ${customer.name}, ${ORDER_SOURCE_LABEL[input.source]}`,
+            "order",
+            orderId,
+          ),
+        );
+        return { ok: true, orderId };
+      },
+      setOrderStatus(orderId, status, reason = "") {
+        const current = requireState();
+        const permission: Permission = status === "cancelled" ? "orders.cancel" : "orders.edit";
+        const denied = deny(actor, viewing, permission);
+        if (denied || !actor) return fail(denied ?? "Недостаточно прав");
+        const order = current.orders.find((item) => item.id === orderId);
+        if (!order) return fail("Заказ не найден");
+        if (!canSeeOrder(order, actor.id, allows(actor.role, "orders.view_all"))) return fail("Этот заказ вам не назначен");
+        if (!STATUS_TRANSITIONS[order.status].includes(status)) return fail("Такой переход статуса недоступен");
+        const cleanReason = reason.trim();
+        if (status === "cancelled" && cleanReason.length < 3) return fail("Укажите причину отмены");
+        const nowIso = new Date().toISOString();
+        setState(
+          withAudit(
+            {
+              ...current,
+              orders: current.orders.map((item) =>
+                item.id === orderId
+                  ? {
+                      ...item,
+                      status,
+                      hold: null,
+                      callbackAt: null,
+                      cancelReason: status === "cancelled" ? cleanReason : item.cancelReason,
+                      updatedAt: nowIso,
+                    }
+                  : item,
+              ),
+              orderEvents: [
+                {
+                  id: uid(),
+                  orderId,
+                  actorId: actor.id,
+                  kind: status === "cancelled" ? "cancelled" : "status",
+                  detail:
+                    status === "cancelled"
+                      ? `Отменён: ${cleanReason}`
+                      : `${ORDER_STATUS_LABEL[order.status]} → ${ORDER_STATUS_LABEL[status]}`,
+                  at: nowIso,
+                },
+                ...current.orderEvents,
+              ],
+            },
+            actor.id,
+            status === "cancelled" ? "Заказ отменён" : "Статус заказа изменён",
+            `№${order.number}: ${ORDER_STATUS_LABEL[status]}`,
+            "order",
+            orderId,
+          ),
+        );
+        return ok();
+      },
+      assignOrderDriver(orderId, driverId) {
+        const current = requireState();
+        const denied = deny(actor, viewing, "orders.assign_driver");
+        if (denied || !actor) return fail(denied ?? "Недостаточно прав");
+        const order = current.orders.find((item) => item.id === orderId);
+        if (!order) return fail("Заказ не найден");
+        if (!canSeeOrder(order, actor.id, allows(actor.role, "orders.view_all"))) return fail("Этот заказ вам не назначен");
+        if (order.status === "done" || order.status === "cancelled") return fail("Заказ уже закрыт");
+        if ((order.status === "in_progress" || order.status === "en_route") && !driverId) return fail("Сначала завершите или отмените поездку");
+        if (driverId === order.driverId) return fail("Этот водитель уже назначен");
+        const nextDriver = driverId ? current.drivers.find((item) => item.id === driverId) ?? null : null;
+        if (driverId && !nextDriver) return fail("Водитель не найден");
+        if (nextDriver && !canAssignDriver(current.orders, nextDriver, orderId)) return fail("У водителя уже есть активная поездка или он не на линии");
+        const previous = order.driverId ? current.drivers.find((item) => item.id === order.driverId) : null;
+        const nowIso = new Date().toISOString();
+        const nextStatus: OrderStatus = nextDriver
+          ? order.status === "in_progress" || order.status === "en_route"
+            ? order.status
+            : "assigned"
+          : "awaiting_driver";
+        const detail = nextDriver
+          ? previous
+            ? `Переназначен: ${fullName(previous)} → ${fullName(nextDriver)}`
+            : `Назначен водитель ${fullName(nextDriver)}`
+          : `Водитель снят${previous ? `: ${fullName(previous)}` : ""}`;
+        setState(
+          withAudit(
+            {
+              ...current,
+              orders: current.orders.map((item) =>
+                item.id === orderId
+                  ? { ...item, driverId, status: nextStatus, hold: nextDriver && item.hold === "no_driver" ? null : item.hold, updatedAt: nowIso }
+                  : item,
+              ),
+              orderEvents: [
+                { id: uid(), orderId, actorId: actor.id, kind: "assigned", detail, at: nowIso },
+                ...current.orderEvents,
+              ],
+            },
+            actor.id,
+            nextDriver ? "Водитель назначен" : "Водитель снят",
+            `№${order.number}. ${detail}`,
+            "order",
+            orderId,
+          ),
+        );
+        return ok();
+      },
+      setOrderAttention(orderId, hold, callbackAt, priority) {
+        const current = requireState();
+        const denied = deny(actor, viewing, "orders.edit");
+        if (denied || !actor) return fail(denied ?? "Недостаточно прав");
+        const order = current.orders.find((item) => item.id === orderId);
+        if (!order) return fail("Заказ не найден");
+        if (!canSeeOrder(order, actor.id, allows(actor.role, "orders.view_all"))) return fail("Этот заказ вам не назначен");
+        if (order.status === "done" || order.status === "cancelled") return fail("Заказ уже закрыт");
+        if (hold === "callback" && !callbackAt) return fail("Укажите время повторного звонка");
+        if (callbackAt && Number.isNaN(new Date(callbackAt).getTime())) return fail("Время повторного звонка указано неверно");
+        const nowIso = new Date().toISOString();
+        const detail = hold
+          ? `${ORDER_HOLD_LABEL[hold]}${hold === "callback" && callbackAt ? ` на ${formatDateTime(callbackAt)}` : ""}`
+          : priority === "high" ? "Приоритет: срочный" : "Метка снята";
+        setState(
+          withAudit(
+            {
+              ...current,
+              orders: current.orders.map((item) =>
+                item.id === orderId ? { ...item, hold, callbackAt: hold === "callback" ? callbackAt : null, priority, updatedAt: nowIso } : item,
+              ),
+              orderEvents: [{ id: uid(), orderId, actorId: actor.id, kind: "hold", detail, at: nowIso }, ...current.orderEvents],
+            },
+            actor.id,
+            "Отметка заказа",
+            `№${order.number}: ${detail}`,
+            "order",
+            orderId,
+          ),
+        );
+        return ok();
+      },
+      reopenOrder(orderId, reason) {
+        const current = requireState();
+        const denied = deny(actor, viewing, "orders.reopen");
+        if (denied || !actor) return fail(denied ?? "Недостаточно прав");
+        const order = current.orders.find((item) => item.id === orderId);
+        if (!order) return fail("Заказ не найден");
+        if (order.status !== "done" && order.status !== "cancelled") return fail("Открыть можно только завершённый или отменённый заказ");
+        const cleanReason = reason.trim();
+        if (cleanReason.length < 3) return fail("Укажите причину открытия");
+        const nowIso = new Date().toISOString();
+        setState(
+          withAudit(
+            {
+              ...current,
+              orders: current.orders.map((item) =>
+                item.id === orderId
+                  ? { ...item, status: "processing", driverId: null, hold: null, callbackAt: null, updatedAt: nowIso }
+                  : item,
+              ),
+              orderEvents: [
+                {
+                  id: uid(),
+                  orderId,
+                  actorId: actor.id,
+                  kind: "reopened",
+                  detail: `Открыт снова из «${ORDER_STATUS_LABEL[order.status]}»: ${cleanReason}`,
+                  at: nowIso,
+                },
+                ...current.orderEvents,
+              ],
+            },
+            actor.id,
+            "Заказ открыт снова",
+            `№${order.number}: ${cleanReason}`,
+            "order",
+            orderId,
+          ),
+        );
+        return ok();
+      },
+      reassignOrderDispatcher(orderId, dispatcherId) {
+        const current = requireState();
+        const denied = deny(actor, viewing, "orders.reassign_dispatcher");
+        if (denied || !actor) return fail(denied ?? "Недостаточно прав");
+        const order = current.orders.find((item) => item.id === orderId);
+        if (!order) return fail("Заказ не найден");
+        if (order.status === "done" || order.status === "cancelled") return fail("Заказ уже закрыт");
+        const target = current.users.find((item) => item.id === dispatcherId && item.role === "dispatcher" && item.accountStatus === "active");
+        if (!target) return fail("Выберите активного диспетчера");
+        if (target.id === order.dispatcherId) return fail("Этот диспетчер уже назначен");
+        const previous = current.users.find((item) => item.id === order.dispatcherId);
+        const nowIso = new Date().toISOString();
+        const detail = `${previous ? fullName(previous) : "Без диспетчера"} → ${fullName(target)}`;
+        setState(
+          withAudit(
+            {
+              ...current,
+              orders: current.orders.map((item) => (item.id === orderId ? { ...item, dispatcherId, updatedAt: nowIso } : item)),
+              orderEvents: [{ id: uid(), orderId, actorId: actor.id, kind: "dispatcher", detail, at: nowIso }, ...current.orderEvents],
+            },
+            actor.id,
+            "Диспетчер переназначен",
+            `№${order.number}: ${detail}`,
+            "order",
+            orderId,
+          ),
+        );
+        return ok();
+      },
+      setDriverAvailability(driverId, availability) {
+        const current = requireState();
+        if (!actor || viewing || (actor.role !== "admin" && actor.role !== "dispatcher")) return fail("Недостаточно прав");
+        const driver = current.drivers.find((item) => item.id === driverId);
+        if (!driver) return fail("Водитель не найден");
+        if (driver.availability === availability) return ok();
+        if (availability === "offline" && !canAssignDriver(current.orders, { ...driver, availability: "available" }, "")) {
+          return fail("У водителя активный заказ");
+        }
+        setState(
+          withAudit(
+            {
+              ...current,
+              drivers: current.drivers.map((item) => (item.id === driverId ? { ...item, availability } : item)),
+            },
+            actor.id,
+            "Статус водителя изменён",
+            `${fullName(driver)}: ${availability === "available" ? "на линии" : "не на линии"}`,
+            "driver",
+            driverId,
+          ),
+        );
+        return ok();
+      },
       markRead(conversationId) {
         const current = requireState();
         const conversation = current.conversations.find((item) => item.id === conversationId);
@@ -599,7 +983,6 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
         });
       },
       resetDemo() {
-        const current = requireState();
         if (!actor || actor.role !== "admin" || viewing) return;
         const fresh = createSeed();
         fresh.session = { userId: actor.id, viewAsUserId: null };
@@ -608,13 +991,9 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
         );
       },
     };
-  }, [actorId(state), now, ready, state]);
+  }, [now, ready, state]);
 
   return <CrmContext.Provider value={api}>{children}</CrmContext.Provider>;
-}
-
-function actorId(state: CrmState | null) {
-  return state?.session?.userId ?? "";
 }
 
 export function useCrm() {

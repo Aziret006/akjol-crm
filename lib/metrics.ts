@@ -1,7 +1,7 @@
 import { fullName, SOURCE_LABEL } from "./labels";
 import type { Conversation, CrmState, Message, SourceKind, User } from "./types";
-import { bishkekDateString, datesBetween, formatDuration, inDateRange, periodBounds } from "./time";
-import { summarizeDate } from "./attendance";
+import { addDays, bishkekDateString, datesBetween, formatDuration, inDateRange, periodBounds } from "./time";
+import { currentStatus, openShift, summarizeDate } from "./attendance";
 import type { PeriodKind } from "./types";
 
 export function visibleConversations(state: CrmState, user: User | null, asDispatcher: boolean) {
@@ -133,6 +133,82 @@ export function handledToday(state: CrmState, userId: string, now = Date.now()) 
       conversation.status === "done" &&
       inDateRange(conversation.updatedAt, today, today),
   ).length;
+}
+
+export type OverviewRange = "today" | "yesterday" | "7" | "30";
+
+export function overviewBounds(range: OverviewRange, now = Date.now()) {
+  const today = bishkekDateString(new Date(now));
+  if (range === "today") return { from: today, to: today, label: "Сегодня" };
+  if (range === "yesterday") {
+    const day = addDays(today, -1);
+    return { from: day, to: day, label: "Вчера" };
+  }
+  if (range === "7") return { from: addDays(today, -6), to: today, label: "7 дней" };
+  return { from: addDays(today, -29), to: today, label: "30 дней" };
+}
+
+export function appealOverview(state: CrmState, from: string, to: string) {
+  const rows = state.conversations.filter((conversation) => inDateRange(conversation.createdAt, from, to));
+  const responses = rows
+    .map((conversation) => firstResponseMs(state.messages, conversation.id))
+    .filter((value): value is number => value != null);
+  const days = datesBetween(from, to).map((day) => ({
+    day,
+    count: rows.filter((conversation) => bishkekDateString(new Date(conversation.createdAt)) === day).length,
+  }));
+  const maxDay = Math.max(1, ...days.map((day) => day.count));
+  const sources = sourceStats(state, from, to);
+  const maxSource = Math.max(1, ...sources.map((source) => source.count));
+  const dispatchers = state.users
+    .filter((user) => user.role === "dispatcher")
+    .map((user) => {
+      const assigned = rows.filter((conversation) => conversation.assigneeId === user.id);
+      const done = assigned.filter((conversation) => conversation.status === "done").length;
+      return { user, assigned: assigned.length, done };
+    })
+    .sort((a, b) => b.done - a.done || b.assigned - a.assigned);
+  return {
+    total: rows.length,
+    done: rows.filter((conversation) => conversation.status === "done").length,
+    open: rows.filter((conversation) => conversation.status !== "done").length,
+    unassigned: rows.filter((conversation) => !conversation.assigneeId && conversation.status !== "done").length,
+    avgResponse: responses.length ? responses.reduce((sum, value) => sum + value, 0) / responses.length : null,
+    days,
+    maxDay,
+    sources,
+    maxSource,
+    dispatchers,
+    recent: [...rows].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 8),
+  };
+}
+
+export function shiftSnapshot(state: CrmState, now = Date.now()) {
+  const today = bishkekDateString(new Date(now));
+  const dispatchers = state.users.filter((user) => user.role === "dispatcher" && user.accountStatus === "active");
+  let onShift = 0;
+  const stale: { user: User; startedAt: string; status: "working" | "away" }[] = [];
+  for (const user of dispatchers) {
+    const todayEvents = summarizeDate(state.events, user.id, today, now, user.scheduleStart).events;
+    const status = currentStatus(state.events, user.id, new Date(now));
+    if (todayEvents.length > 0 && (status === "working" || status === "away")) onShift += 1;
+    const open = openShift(state.events, user.id);
+    if (!open) continue;
+    const startedAt = open.events[0].at;
+    if (bishkekDateString(new Date(startedAt)) < today && (status === "working" || status === "away")) {
+      stale.push({ user, startedAt, status });
+    }
+  }
+  return { onShift, stale };
+}
+
+export function waitingAppeals(state: CrmState, now = Date.now()) {
+  const limit = now - 2 * 60 * 60 * 1000;
+  return state.conversations.filter((conversation) => {
+    if (conversation.status === "done") return false;
+    if (new Date(conversation.createdAt).getTime() > limit) return false;
+    return !hasReply(state.messages, conversation.id);
+  });
 }
 
 export function customerConversations(state: CrmState, customerId: string, exceptId?: string): Conversation[] {

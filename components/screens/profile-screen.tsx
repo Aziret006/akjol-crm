@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { summarizeDate } from "@/lib/attendance";
 import { ACCOUNT_LABEL, EVENT_LABEL, ROLE_LABEL, fullName } from "@/lib/labels";
 import { useCrm } from "@/lib/store";
@@ -20,10 +20,11 @@ export function ProfileScreen() {
     ? crm.state.users.find((item) => item.id === requested) ?? null
     : crm.user;
   const [tab, setTab] = useState<TabId>("data");
-
-  useEffect(() => {
+  const [tabUserId, setTabUserId] = useState(user?.id);
+  if (tabUserId !== user?.id) {
+    setTabUserId(user?.id);
     setTab("data");
-  }, [user?.id]);
+  }
 
   if (!crm.user) return null;
   if (!user) return <Empty title="Сотрудник не найден" text="Запись удалена или ссылка устарела." />;

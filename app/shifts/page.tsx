@@ -21,7 +21,7 @@ export default function ShiftsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex rounded-xl bg-white p-1 w-fit">
+      <div className="flex rounded-[10px] bg-white p-1 w-fit">
         {(["day", "week", "month"] as PeriodKind[]).map((item) => (
           <button key={item} className={`rounded-lg px-3 py-2 text-sm font-semibold ${period === item ? "bg-[#2e6db4] text-white" : "text-[#525c69]"}`} onClick={() => setPeriod(item)} type="button">
             {item === "day" ? "День" : item === "week" ? "Неделя" : "Месяц"}
@@ -37,7 +37,7 @@ export default function ShiftsPage() {
           <table className="w-full text-left text-sm">
             <tbody>
               {row.summary.events.map((event) => (
-                <tr key={event.id} className="border-t border-[#f3eee6]">
+                <tr key={event.id} className="border-t border-[#e8eaee]">
                   <td className="px-4 py-2">{EVENT_LABEL[event.type]}</td>
                   <td className="px-4 py-2">{formatTime(event.at)}</td>
                 </tr>

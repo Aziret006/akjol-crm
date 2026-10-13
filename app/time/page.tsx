@@ -40,7 +40,7 @@ function AdminTime() {
           summary: summarizeDate(crm.state.events, user.id, day, crm.now, user.scheduleStart),
         })),
       ).filter((row) => period === "day" || row.summary.events.length > 0),
-    [crm.now, crm.state.events, dates, people],
+    [crm.now, crm.state.events, dates, people, period],
   );
 
   function exportReport() {
@@ -71,7 +71,7 @@ function AdminTime() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
-        <div className="flex rounded-xl bg-white p-1">
+        <div className="flex rounded-[10px] bg-white p-1">
           {(["day", "week", "month"] as PeriodKind[]).map((item) => (
             <button key={item} className={`rounded-lg px-3 py-2 text-sm font-semibold ${period === item ? "bg-[#2e6db4] text-white" : "text-[#525c69]"}`} onClick={() => setPeriod(item)} type="button">
               {item === "day" ? "День" : item === "week" ? "Неделя" : "Месяц"}
@@ -84,11 +84,11 @@ function AdminTime() {
         </select>
         <Button variant="secondary" onClick={exportReport}>Скачать CSV</Button>
       </div>
-      <p className="text-sm text-[#6b6560]">Время в часовом поясе Asia/Bishkek. В рабочее время не входят отходы.</p>
+      <p className="text-sm text-[#667085]">Время в часовом поясе Asia/Bishkek. В рабочее время не входят отходы.</p>
       {rows.length === 0 ? <Empty title="Смен нет" text="За выбранный период отметок не найдено." /> : (
         <div className="overflow-x-auto crm-panel">
           <table className="w-full min-w-[860px] text-left text-sm">
-            <thead className="bg-[#faf8f4] text-[#6b6560]">
+            <thead className="bg-[#f7f8fa] text-[#667085]">
               <tr>
                 {["Сотрудник", "Дата", "Статус", "Пришёл", "Отходы", "Закончил", "Рабочее время", "Опоздание"].map((title) => (
                   <th key={title} className="px-4 py-3 font-medium">{title}</th>
@@ -100,7 +100,7 @@ function AdminTime() {
                 const key = `${row.user.id}-${row.day}`;
                 return (
                   <Fragment key={key}>
-                    <tr className="cursor-pointer border-t border-[#f3eee6] hover:bg-[#faf8f4]" onClick={() => setOpened(opened === key ? null : key)}>
+                    <tr className="cursor-pointer border-t border-[#e8eaee] hover:bg-[#f7f8fa]" onClick={() => setOpened(opened === key ? null : key)}>
                       <td className="px-4 py-3 font-medium">{fullName(row.user)}</td>
                       <td className="px-4 py-3">{formatDate(row.day)}</td>
                       <td className="px-4 py-3"><WorkBadge status={row.summary.status} /></td>
@@ -111,7 +111,7 @@ function AdminTime() {
                       <td className="px-4 py-3">{row.summary.lateMin == null ? "—" : row.summary.lateMin === 0 ? "Вовремя" : `${row.summary.lateMin} мин`}</td>
                     </tr>
                     {opened === key ? (
-                      <tr key={`${key}-details`} className="border-t border-[#f3eee6] bg-[#faf8f4]">
+                      <tr key={`${key}-details`} className="border-t border-[#e8eaee] bg-[#f7f8fa]">
                         <td colSpan={8} className="px-4 py-3">
                           <ul className="space-y-2">
                             {row.summary.events.map((event) => (
@@ -133,15 +133,15 @@ function AdminTime() {
       )}
       <section className="crm-panel p-4">
         <h2 className="font-semibold">История исправлений</h2>
-        {crm.state.corrections.length === 0 ? <p className="mt-2 text-sm text-[#6b6560]">Исправлений пока нет</p> : (
+        {crm.state.corrections.length === 0 ? <p className="mt-2 text-sm text-[#667085]">Исправлений пока нет</p> : (
           <ul className="mt-3 space-y-2 text-sm">
             {crm.state.corrections.map((correction) => {
               const employee = crm.state.users.find((user) => user.id === correction.userId);
               const author = crm.state.users.find((user) => user.id === correction.actorId);
               return (
-                <li key={correction.id} className="rounded-xl bg-[#faf8f4] px-3 py-2">
+                <li key={correction.id} className="rounded-[10px] bg-[#f7f8fa] px-3 py-2">
                   {employee ? fullName(employee) : "Сотрудник"}: {formatTime(correction.previousAt)} → {formatTime(correction.nextAt)}. {correction.reason}
-                  <span className="mt-1 block text-[#6b6560]">{author ? fullName(author) : "Администратор"} · {formatDateTime(correction.at)}</span>
+                  <span className="mt-1 block text-[#667085]">{author ? fullName(author) : "Администратор"} · {formatDateTime(correction.at)}</span>
                 </li>
               );
             })}

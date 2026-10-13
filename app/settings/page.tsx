@@ -23,31 +23,31 @@ export default function SettingsPage() {
       <section className="crm-panel p-5">
         <p className="text-xs text-[#828b95]">WhatsApp</p>
         <h2 className="mt-1 text-xl font-semibold">Не подключено</h2>
-        <p className="mt-2 text-sm text-[#6b6560]">
+        <p className="mt-2 text-sm text-[#667085]">
           Для живых переписок нужен WhatsApp Business Platform / Cloud API или разрешённый провайдер. Кнопка «подключить» без ключей не включается, чтобы не создавать ложный статус доставки.
         </p>
         <ul className="mt-4 space-y-2 text-sm">
           {ENV_VARS.map(([name, hint]) => (
-            <li key={name} className="rounded-xl bg-[#faf8f4] px-3 py-2">
+            <li key={name} className="rounded-[10px] bg-[#f7f8fa] px-3 py-2">
               <code className="font-semibold">{name}</code>
-              <span className="mt-0.5 block text-[#6b6560]">{hint}</span>
+              <span className="mt-0.5 block text-[#667085]">{hint}</span>
             </li>
           ))}
         </ul>
-        <p className="mt-3 text-sm text-[#6b6560]">Секреты хранятся только в переменных окружения сервера. В браузер они не попадают.</p>
+        <p className="mt-3 text-sm text-[#667085]">Секреты хранятся только в переменных окружения сервера. В браузер они не попадают. Телефония общего номера настраивается отдельно, в разделе «Телефония»: TELEPHONY_PROVIDER, TELEPHONY_WEBHOOK_SECRET, TELEPHONY_SHARED_NUMBER.</p>
       </section>
       <section className="space-y-4">
         <article className="crm-panel p-5">
           <h2 className="font-semibold">Компания</h2>
           <dl className="mt-3 space-y-2 text-sm">
-            <div className="flex justify-between gap-4"><dt className="text-[#6b6560]">Название</dt><dd>Акжол таксопарк</dd></div>
-            <div className="flex justify-between gap-4"><dt className="text-[#6b6560]">Часовой пояс</dt><dd>Asia/Bishkek</dd></div>
-            <div className="flex justify-between gap-4"><dt className="text-[#6b6560]">Хранение</dt><dd>Локально в браузере</dd></div>
+            <div className="flex justify-between gap-4"><dt className="text-[#667085]">Название</dt><dd>Акжол таксопарк</dd></div>
+            <div className="flex justify-between gap-4"><dt className="text-[#667085]">Часовой пояс</dt><dd>Asia/Bishkek</dd></div>
+            <div className="flex justify-between gap-4"><dt className="text-[#667085]">Хранение</dt><dd>Локально в браузере</dd></div>
           </dl>
         </article>
         <article className="crm-panel p-5">
           <h2 className="font-semibold">Демонстрационные данные</h2>
-          <p className="mt-2 text-sm text-[#6b6560]">Сброс вернёт тестовых сотрудников и обращения. Ваша сессия администратора сохранится.</p>
+          <p className="mt-2 text-sm text-[#667085]">Сброс вернёт тестовых сотрудников и обращения. Ваша сессия администратора сохранится.</p>
           {confirm ? (
             <div className="mt-3 flex gap-2">
               <Button variant="danger" onClick={() => { crm.resetDemo(); setConfirm(false); }}>Подтвердить сброс</Button>

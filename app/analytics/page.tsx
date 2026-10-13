@@ -19,8 +19,8 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-[#6b6560]">{bounds.label}: {bounds.from} — {bounds.to}. Цифры считаются по сохранённым обращениям и сменам.</p>
-        <div className="flex rounded-xl bg-white p-1">
+        <p className="text-sm text-[#667085]">{bounds.label}: {bounds.from} — {bounds.to}. Цифры считаются по сохранённым обращениям и сменам.</p>
+        <div className="flex rounded-[10px] bg-white p-1">
           {(["day", "week", "month"] as PeriodKind[]).map((item) => (
             <button key={item} className={`rounded-lg px-3 py-2 text-sm font-semibold ${period === item ? "bg-[#2e6db4] text-white" : "text-[#525c69]"}`} onClick={() => setPeriod(item)} type="button">
               {item === "day" ? "День" : item === "week" ? "Неделя" : "Месяц"}
@@ -30,7 +30,7 @@ export default function AnalyticsPage() {
       </div>
       <div className="overflow-x-auto crm-panel">
         <table className="w-full min-w-[820px] text-left text-sm">
-          <thead className="bg-[#faf8f4] text-[#6b6560]">
+          <thead className="bg-[#f7f8fa] text-[#667085]">
             <tr>
               {["Диспетчер", "Закрыто", "В работе", "Входящие", "Первый ответ", "Рабочее время"].map((title) => (
                 <th key={title} className="px-4 py-3 font-medium">{title}</th>
@@ -39,7 +39,7 @@ export default function AnalyticsPage() {
           </thead>
           <tbody>
             {report.map((row) => (
-              <tr key={row.user.id} className="border-t border-[#f3eee6]">
+              <tr key={row.user.id} className="border-t border-[#e8eaee]">
                 <td className="px-4 py-3 font-medium">{row.name}</td>
                 <td className="px-4 py-3">{row.handled}</td>
                 <td className="px-4 py-3">{row.open}</td>
@@ -60,7 +60,7 @@ export default function AnalyticsPage() {
       </div>
       <section className="crm-panel p-4">
         <h2 className="font-semibold">Источники за период</h2>
-        {sources.length === 0 ? <p className="mt-2 text-sm text-[#6b6560]">Данных нет</p> : (
+        {sources.length === 0 ? <p className="mt-2 text-sm text-[#667085]">Данных нет</p> : (
           <ul className="mt-3 space-y-2">
             {sources.map((source) => (
               <li key={source.source} className="grid grid-cols-[140px_1fr_80px] items-center gap-3 text-sm">

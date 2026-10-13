@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ru" className="h-full">
-      <body className="min-h-full bg-[#eef2f4] text-[#333]">
+      <body className="min-h-full bg-[#f7f8fa] text-[#1f2933]">
         <CrmProvider>
           <Frame>{children}</Frame>
         </CrmProvider>

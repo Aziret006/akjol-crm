@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { summarizeDate } from "@/lib/attendance";
-import { ACCOUNT_LABEL, ROLE_LABEL, fullName } from "@/lib/labels";
+import { ROLE_LABEL, fullName } from "@/lib/labels";
 import { handledToday } from "@/lib/metrics";
 import { useCrm, type UserInput } from "@/lib/store";
 import { bishkekDateString, formatDate, formatDuration, formatTime } from "@/lib/time";
@@ -58,7 +58,7 @@ export function EmployeesScreen() {
       {rows.length === 0 ? <Empty title="Сотрудники не найдены" text="Измените поиск или добавьте сотрудника." /> : (
         <div className="overflow-x-auto crm-panel">
           <table className="w-full min-w-[980px] text-left text-sm">
-            <thead className="bg-[#faf8f4] text-[#6b6560]">
+            <thead className="bg-[#f7f8fa] text-[#667085]">
               <tr>
                 {["Сотрудник", "Логин", "Роль", "Аккаунт", "Смена", "Приход сегодня", "Время сегодня", "Обработано", "Создан", ""].map((title) => (
                   <th key={title} className="px-3 py-3 font-medium">{title}</th>
@@ -69,7 +69,7 @@ export function EmployeesScreen() {
               {rows.map((user) => {
                 const summary = summarizeDate(crm.state.events, user.id, today, crm.now, user.scheduleStart);
                 return (
-                  <tr key={user.id} className="border-t border-[#f3eee6]">
+                  <tr key={user.id} className="border-t border-[#e8eaee]">
                     <td className="px-3 py-3 font-medium">{fullName(user)}</td>
                     <td className="px-3 py-3">{user.login}</td>
                     <td className="px-3 py-3">{ROLE_LABEL[user.role]}</td>

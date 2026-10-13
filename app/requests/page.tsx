@@ -15,11 +15,11 @@ export default function RequestsPage() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-[#6b6560]">Только обращения, где ответственны вы.</p>
+      <p className="text-sm text-[#667085]">Только обращения, где ответственны вы.</p>
       {rows.length === 0 ? <Empty title="Обращений нет" text="Когда вам назначат чат, он появится здесь." /> : (
         <div className="overflow-x-auto crm-panel">
           <table className="w-full min-w-[680px] text-left text-sm">
-            <thead className="bg-[#faf8f4] text-[#6b6560]">
+            <thead className="bg-[#f7f8fa] text-[#667085]">
               <tr>
                 {["Клиент", "Источник", "Статус", "Обновлено", ""].map((title) => <th key={title} className="px-4 py-3 font-medium">{title}</th>)}
               </tr>
@@ -28,7 +28,7 @@ export default function RequestsPage() {
               {rows.map((conversation) => {
                 const customer = crm.state.customers.find((item) => item.id === conversation.customerId);
                 return (
-                  <tr key={conversation.id} className="border-t border-[#f3eee6]">
+                  <tr key={conversation.id} className="border-t border-[#e8eaee]">
                     <td className="px-4 py-3 font-medium">{customer?.name}</td>
                     <td className="px-4 py-3">{SOURCE_LABEL[conversation.source]}</td>
                     <td className="px-4 py-3"><RequestBadge status={conversation.status} /></td>
@@ -43,7 +43,7 @@ export default function RequestsPage() {
           </table>
         </div>
       )}
-      {crm.isAdmin ? <p className="text-sm text-[#6b6560]">Администратор {crm.actor ? fullName(crm.actor) : ""} видит здесь только лично назначенные обращения.</p> : null}
+      {crm.isAdmin ? <p className="text-sm text-[#667085]">Администратор {crm.actor ? fullName(crm.actor) : ""} видит здесь только лично назначенные обращения.</p> : null}
     </div>
   );
 }

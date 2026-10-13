@@ -1,11 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #eef2f4;
-  --foreground: #333333;
-  --line: #e3e8ee;
-  --muted: #828b95;
+  --background: #f7f8fa;
+  --foreground: #1f2933;
+  --line: #e6e8ec;
+  --muted: #667085;
   --accent: #2e6db4;
+  --accent-strong: #245a96;
+  --surface: #ffffff;
 }
 
 @theme inline {
@@ -18,7 +20,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 button,
@@ -30,14 +32,39 @@ textarea {
 
 .crm-panel {
   border: 1px solid var(--line);
-  background: #fff;
-  border-radius: 4px;
+  background: var(--surface);
+  border-radius: 10px;
 }
 
 .crm-link {
-  color: #2067b0;
+  color: var(--accent);
 }
 
 .crm-link:hover {
   text-decoration: underline;
+}
+
+.crm-table {
+  width: 100%;
+  text-align: left;
+}
+
+.crm-table thead {
+  background: #f7f8fa;
+  color: #52606d;
+}
+
+.crm-table th {
+  padding: 10px 12px;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.crm-table td {
+  padding: 10px 12px;
+  border-top: 1px solid var(--line);
+}
+
+.crm-table tbody tr:hover {
+  background: #f8fafc;
 }

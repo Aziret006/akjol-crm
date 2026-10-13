@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { OrderForm } from "@/components/order-form";
 import { CHANNEL_LABEL, SOURCE_LABEL, SOURCE_OPTIONS, STATUS_LABEL, fullName } from "@/lib/labels";
 import { customerConversations, lastMessage, visibleConversations } from "@/lib/metrics";
+import { orderSourceFromConversation } from "@/lib/orders";
 import { useCrm } from "@/lib/store";
 import { bishkekDateString, formatDateTime, formatTime } from "@/lib/time";
 import type { RequestStatus, SourceKind } from "@/lib/types";
@@ -13,7 +15,7 @@ export function ChatsScreen() {
   const crm = useCrm();
   const params = useSearchParams();
   const [selectedId, setSelectedId] = useState<string | null>(params.get("chat"));
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(params.get("q") ?? "");
   const [status, setStatus] = useState("all");
   const [source, setSource] = useState("all");
   const [employee, setEmployee] = useState(params.get("employee") ?? "all");
@@ -24,6 +26,7 @@ export function ChatsScreen() {
   const [sourceReason, setSourceReason] = useState("");
   const [nextSource, setNextSource] = useState<SourceKind>("unknown");
   const [mobile, setMobile] = useState<"list" | "chat">("list");
+  const [orderForm, setOrderForm] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const list = useMemo(() => {
@@ -51,16 +54,20 @@ export function ChatsScreen() {
       crm.state.conversations.some((conversation) => conversation.id === selectedId) &&
       !visibleConversations(crm.state, crm.user, !crm.isAdmin).some((conversation) => conversation.id === selectedId),
   );
-
-  useEffect(() => {
-    const chat = params.get("chat");
-    if (chat) {
-      setSelectedId(chat);
+  const chatParam = params.get("chat");
+  const employeeParam = params.get("employee");
+  const queryParam = params.get("q");
+  const paramKey = `${chatParam ?? ""}|${employeeParam ?? ""}|${queryParam ?? ""}`;
+  const [seenParams, setSeenParams] = useState(paramKey);
+  if (seenParams !== paramKey) {
+    setSeenParams(paramKey);
+    if (chatParam) {
+      setSelectedId(chatParam);
       setMobile("chat");
     }
-    const preset = params.get("employee");
-    if (preset) setEmployee(preset);
-  }, [params]);
+    if (employeeParam) setEmployee(employeeParam);
+    if (queryParam) setQuery(queryParam);
+  }
 
   useEffect(() => {
     if (active) crm.markRead(active.id);
@@ -96,7 +103,7 @@ export function ChatsScreen() {
   }
 
   return (
-    <div className="flex h-[calc(100dvh-4.5rem)] flex-col gap-2">
+    <div className="flex h-[calc(100dvh-5.5rem)] flex-col gap-2">
       <div className="shrink-0 rounded border border-[#d6e4f5] bg-[#f4f8fc] px-3 py-2 text-[13px]">
         Демонстрационный режим. Входящие — тестовые записи. Новые ответы сохраняются только в этом браузере и не уходят в WhatsApp.
       </div>
@@ -119,7 +126,7 @@ export function ChatsScreen() {
       </div>
       <div className="grid min-h-0 flex-1 overflow-hidden crm-panel lg:grid-cols-[280px_minmax(0,1fr)_280px]">
         <aside className={`${mobile === "chat" ? "hidden" : "block"} min-h-0 overflow-y-auto border-[#e3e8ee] lg:block lg:border-r`}>
-          {list.length === 0 ? <p className="p-4 text-sm text-[#6b6560]">Чатов по фильтру нет</p> : list.map((conversation) => {
+          {list.length === 0 ? <p className="p-4 text-sm text-[#667085]">Чатов по фильтру нет</p> : list.map((conversation) => {
             const person = crm.state.customers.find((item) => item.id === conversation.customerId);
             const last = lastMessage(crm.state.messages, conversation.id);
             const assignee = crm.state.users.find((user) => user.id === conversation.assigneeId);
@@ -128,26 +135,26 @@ export function ChatsScreen() {
               <button key={conversation.id} className={`block w-full border-b border-[#eef1f4] px-3 py-2 text-left ${current ? "bg-[#e8f2fc]" : "hover:bg-[#f7f9fb]"}`} onClick={() => choose(conversation.id)} type="button">
                 <span className="flex items-center justify-between gap-2">
                   <span className="font-semibold">{person?.name}</span>
-                  <span className="text-xs text-[#6b6560]">{last ? formatTime(last.at) : ""}</span>
+                  <span className="text-xs text-[#667085]">{last ? formatTime(last.at) : ""}</span>
                 </span>
-                <span className="mt-1 line-clamp-1 block text-sm text-[#6b6560]">{last?.text ?? "Нет сообщений"}</span>
+                <span className="mt-1 line-clamp-1 block text-sm text-[#667085]">{last?.text ?? "Нет сообщений"}</span>
                 <span className="mt-2 flex items-center gap-2 text-xs">
                   <RequestBadge status={conversation.status} />
                   {conversation.unread > 0 ? <span className="rounded bg-[#2e6db4] text-white px-1.5 font-bold">{conversation.unread}</span> : null}
-                  <span className="text-[#6b6560]">{assignee ? fullName(assignee) : "Не назначен"}</span>
+                  <span className="text-[#667085]">{assignee ? fullName(assignee) : "Не назначен"}</span>
                 </span>
               </button>
             );
           })}
         </aside>
         <section className={`${mobile === "list" ? "hidden" : "flex"} min-h-0 flex-col overflow-hidden lg:flex`}>
-          {!active || !customer ? <p className="p-6 text-sm text-[#6b6560]">Выберите чат</p> : (
+          {!active || !customer ? <p className="p-6 text-sm text-[#667085]">Выберите чат</p> : (
             <>
-              <div className="flex items-center gap-3 border-b border-[#f3eee6] px-4 py-3">
+              <div className="flex items-center gap-3 border-b border-[#e8eaee] px-4 py-3">
                 <button className="text-sm font-semibold lg:hidden" onClick={() => setMobile("list")} type="button">Назад</button>
                 <div>
                   <p className="font-semibold">{customer.name}</p>
-                  <p className="text-xs text-[#6b6560]">{customer.phone} · {CHANNEL_LABEL[active.channel]}</p>
+                  <p className="text-xs text-[#667085]">{customer.phone} · {CHANNEL_LABEL[active.channel]}</p>
                 </div>
               </div>
               <div className="min-h-0 flex-1 space-y-2 overflow-y-auto bg-[#f4f7f9] px-3 py-3">
@@ -213,14 +220,15 @@ export function ChatsScreen() {
                 <p className="text-xs text-[#828b95]">Клиент</p>
                 <p className="mt-1 font-semibold">{customer.name}</p>
                 <p>{customer.phone}</p>
-                <p className="text-[#6b6560]">{customer.city}</p>
+                <p className="text-[#667085]">{customer.city}</p>
+                <Button className="mt-2" variant="secondary" type="button" disabled={crm.readOnly} onClick={() => setOrderForm(true)}>Создать заказ</Button>
               </div>
               <div>
                 <p className="text-xs text-[#828b95]">Источник</p>
                 <p className="mt-1 font-semibold">{SOURCE_LABEL[active.source]}</p>
-                <p className="text-[#6b6560]">Канал: {CHANNEL_LABEL[active.channel]}</p>
-                {active.sourceDetail ? <p className="text-[#6b6560]">{active.sourceDetail}</p> : null}
-                <p className="text-[#6b6560]">Первое обращение: {formatDateTime(active.createdAt)}</p>
+                <p className="text-[#667085]">Канал: {CHANNEL_LABEL[active.channel]}</p>
+                {active.sourceDetail ? <p className="text-[#667085]">{active.sourceDetail}</p> : null}
+                <p className="text-[#667085]">Первое обращение: {formatDateTime(active.createdAt)}</p>
               </div>
               <Field label="Статус">
                 <select className={controlClass} value={active.status} disabled={crm.readOnly} onChange={(event) => crm.setRequestStatus(active.id, event.target.value as RequestStatus)}>
@@ -248,12 +256,12 @@ export function ChatsScreen() {
                 <p className="text-xs text-[#828b95]">История источника</p>
                 <ul className="mt-2 space-y-2">
                   {crm.state.sourceChanges.filter((change) => change.conversationId === active.id).map((change) => (
-                    <li key={change.id} className="rounded-xl bg-[#faf8f4] px-3 py-2">
+                    <li key={change.id} className="rounded-[10px] bg-[#f7f8fa] px-3 py-2">
                       {SOURCE_LABEL[change.from]} → {SOURCE_LABEL[change.to]}
-                      <span className="block text-[#6b6560]">{change.reason}</span>
+                      <span className="block text-[#667085]">{change.reason}</span>
                     </li>
                   ))}
-                  {crm.state.sourceChanges.every((change) => change.conversationId !== active.id) ? <li className="text-[#6b6560]">Изменений не было</li> : null}
+                  {crm.state.sourceChanges.every((change) => change.conversationId !== active.id) ? <li className="text-[#667085]">Изменений не было</li> : null}
                 </ul>
               </div>
               <div>
@@ -273,7 +281,7 @@ export function ChatsScreen() {
                 <ul className="mt-2 space-y-2">
                   {crm.state.notes.filter((item) => item.conversationId === active.id).map((item) => {
                     const author = crm.state.users.find((user) => user.id === item.authorId);
-                    return <li key={item.id} className="rounded-xl bg-[#faf8f4] px-3 py-2">{item.text}<span className="mt-1 block text-[#6b6560]">{author ? fullName(author) : ""} · {formatDateTime(item.at)}</span></li>;
+                    return <li key={item.id} className="rounded-[10px] bg-[#f7f8fa] px-3 py-2">{item.text}<span className="mt-1 block text-[#667085]">{author ? fullName(author) : ""} · {formatDateTime(item.at)}</span></li>;
                   })}
                 </ul>
                 <form className="mt-2 space-y-2" onSubmit={(event) => {
@@ -290,7 +298,18 @@ export function ChatsScreen() {
           )}
         </aside>
       </div>
-      {hidden ? <p className="text-sm text-[#6b6560]">Этот чат недоступен для вашей роли.</p> : null}
+      {hidden ? <p className="text-sm text-[#667085]">Этот чат недоступен для вашей роли.</p> : null}
+      {orderForm && active && customer ? (
+        <OrderForm
+          onClose={() => setOrderForm(false)}
+          preset={{
+            phone: customer.phone,
+            name: customer.name,
+            source: orderSourceFromConversation(active.source),
+            conversationId: active.id,
+          }}
+        />
+      ) : null}
     </div>
   );
 }
