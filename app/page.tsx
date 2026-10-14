@@ -242,10 +242,10 @@ function Metric({
   icon: "orders" | "check" | "clock" | "cross";
 }) {
   const palette = {
-    blue: ["bg-[#e8f1fb]", "text-[#1d5fa7]"],
-    green: ["bg-[#e7f6ee]", "text-[#1f7a45]"],
-    amber: ["bg-[#fff4e5]", "text-[#c05621]"],
-    rose: ["bg-[#fdecec]", "text-[#c24141]"],
+    blue: ["bg-[#0d3556]", "text-[#5db9ff]"],
+    green: ["bg-[#0b493f]", "text-[#35d6a0]"],
+    amber: ["bg-[#4a361b]", "text-[#ffc84d]"],
+    rose: ["bg-[#4a2630]", "text-[#ff7180]"],
   }[tone];
   return (
     <article className={`flex min-w-0 items-start justify-between rounded-[10px] px-4 py-4 ${palette[0]}`}>
