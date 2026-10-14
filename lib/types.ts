@@ -78,6 +78,8 @@ export type Customer = {
   name: string;
   phone: string;
   city: string;
+  address: string;
+  note: string;
 };
 
 export type Conversation = {

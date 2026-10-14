@@ -1,4 +1,5 @@
 import { demoDrivers } from "./drivers";
+import { normalizeCustomer } from "./orders";
 import type { AttendanceEvent, AttendanceType, Conversation, CrmState, Message, User } from "./types";
 import { addDays, bishkekDateString, isoAt } from "./time";
 
@@ -350,7 +351,7 @@ export function createSeed(): CrmState {
     users,
     events,
     corrections: [],
-    customers,
+    customers: customers.map((item) => normalizeCustomer(item)),
     conversations,
     messages,
     sourceChanges: [

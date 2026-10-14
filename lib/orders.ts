@@ -34,6 +34,17 @@ function isHold(value: Order["hold"]): value is OrderHold {
   return Boolean(value && HOLDS.includes(value));
 }
 
+export function normalizeCustomer(input: Partial<Customer> & Pick<Customer, "id" | "name" | "phone">): Customer {
+  return {
+    id: input.id,
+    name: input.name || "",
+    phone: input.phone || "",
+    city: input.city || "Бишкек",
+    address: input.address || "",
+    note: input.note || "",
+  };
+}
+
 export function normalizeOrder(order: Order): Order {
   const hold = isHold(order.hold) ? order.hold : null;
   const priority: OrderPriority = order.priority === "high" ? "high" : "normal";

@@ -6,7 +6,7 @@ import { currentStatus, nextEventType, openShift } from "./attendance";
 import { demoDrivers } from "./drivers";
 import { canEditDriver, normalizeDriver } from "./recruitment";
 import { fullName, ORDER_HOLD_LABEL, ORDER_SOURCE_LABEL, ORDER_STATUS_LABEL, SOURCE_LABEL } from "./labels";
-import { canAssignDriver, canSeeOrder, findCustomerByPhone, nextOrderNumber, normalizeOrder, phoneDigits, similarOpenOrder, STATUS_TRANSITIONS } from "./orders";
+import { canAssignDriver, canSeeOrder, findCustomerByPhone, nextOrderNumber, normalizeCustomer, normalizeOrder, phoneDigits, similarOpenOrder, STATUS_TRANSITIONS } from "./orders";
 import { createSeed } from "./seed";
 import { formatDateTime, isoAt, sha256 } from "./time";
 import type {
@@ -73,6 +73,7 @@ export type OrderInput = {
   callId: string | null;
   idempotencyKey: string;
   confirmDuplicate: boolean;
+  intake?: boolean;
 };
 
 export type UserInput = {
@@ -112,6 +113,7 @@ type CrmApi = {
   addNote: (conversationId: string, text: string) => ActionResult;
   markRead: (conversationId: string) => void;
   createOrder: (input: OrderInput) => ActionResult;
+  saveCustomer: (input: { id?: string; name: string; phone: string; city: string; address: string; note: string }) => ActionResult;
   setOrderStatus: (orderId: string, status: OrderStatus, reason?: string) => ActionResult;
   assignOrderDriver: (orderId: string, driverId: string | null) => ActionResult;
   setOrderAttention: (orderId: string, hold: OrderHold | null, callbackAt: string | null, priority: OrderPriority) => ActionResult;
@@ -178,6 +180,7 @@ function loadState(): CrmState {
       driverTasks: Array.isArray(parsed.driverTasks) ? parsed.driverTasks : [],
       driverNotes: Array.isArray(parsed.driverNotes) ? parsed.driverNotes : [],
       ratings: Array.isArray(parsed.ratings) ? parsed.ratings : [],
+      customers: Array.isArray(parsed.customers) ? parsed.customers.map((item) => normalizeCustomer(item)) : [],
       orders: Array.isArray(parsed.orders) ? parsed.orders.map((order) => normalizeOrder(order)) : [],
       orderEvents: Array.isArray(parsed.orderEvents) ? parsed.orderEvents : [],
     };
@@ -668,6 +671,31 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
         });
         return ok();
       },
+      saveCustomer(input) {
+        const current = requireState();
+        const denied = deny(actor, viewing, "orders.create");
+        if (denied || !actor) return fail(denied ?? "Недостаточно прав");
+        const name = input.name.trim();
+        const phone = input.phone.trim();
+        if (name.length < 2) return fail("Укажите имя клиента");
+        if (phoneDigits(phone).length < 6) return fail("Укажите телефон клиента");
+        const duplicate = current.customers.find((item) => item.id !== input.id && phoneDigits(item.phone) === phoneDigits(phone));
+        if (duplicate) return fail(`Такой телефон уже есть: ${duplicate.name}`);
+        const customer = normalizeCustomer({
+          id: input.id || uid(),
+          name,
+          phone,
+          city: input.city.trim() || "Бишкек",
+          address: input.address.trim(),
+          note: input.note.trim(),
+        });
+        const exists = current.customers.some((item) => item.id === customer.id);
+        setState(withAudit({
+          ...current,
+          customers: exists ? current.customers.map((item) => (item.id === customer.id ? customer : item)) : [customer, ...current.customers],
+        }, actor.id, exists ? "Карточка клиента" : "Новый клиент", `${customer.name} · ${customer.phone}`, "customer", customer.id));
+        return { ok: true, orderId: customer.id };
+      },
       createOrder(input) {
         const current = requireState();
         const denied = deny(actor, viewing, "orders.create");
@@ -694,15 +722,15 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
           }
         }
         const matched = findCustomerByPhone(current.customers, phone);
-        const customer = matched ?? {
+        const customer = matched ?? normalizeCustomer({
           id: uid(),
           name: input.name.trim() || "Клиент",
           phone,
           city: "Бишкек",
-        };
+        });
         const nowIso = new Date().toISOString();
         const orderId = uid();
-        const status: OrderStatus = driver ? "assigned" : "awaiting_driver";
+        const status: OrderStatus = driver ? "assigned" : input.intake ? "new" : "awaiting_driver";
         const order: Order = {
           id: orderId,
           number: nextOrderNumber(current.orders),
