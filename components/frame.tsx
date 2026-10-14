@@ -15,7 +15,7 @@ import { TelephonyBridge } from "./telephony-bridge";
 type NavItem = { href: string; label: string; icon: IconName };
 
 const ADMIN_NAV: NavItem[] = [
-  { href: "/", label: "Панель администратора", icon: "home" },
+  { href: "/", label: "Панель руководителя", icon: "home" },
   { href: "/recruitment", label: "Рекрутинг", icon: "chart" },
   { href: "/drivers", label: "Водители", icon: "users" },
   { href: "/orders", label: "Заказы", icon: "orders" },
@@ -38,7 +38,7 @@ const DISPATCHER_NAV: NavItem[] = [
 ];
 
 const TITLES: Record<string, string> = {
-  "/": "Панель администратора",
+  "/": "Панель руководителя",
   "/orders": "Заказы",
   "/drivers": "Водители",
   "/recruitment": "Рекрутинг",
@@ -85,9 +85,13 @@ export function Frame({ children }: { children: React.ReactNode }) {
     setOpen(false);
   }
 
+  const pageTitle = pathname === "/"
+    ? (!crm.actor ? "Акжол" : crm.isAdmin ? "Панель руководителя" : "Рабочее место диспетчера")
+    : (TITLES[pathname] ?? "Акжол");
+
   useEffect(() => {
-    document.title = `${TITLES[pathname] ?? "Акжол"} — Akjol CRM`;
-  }, [pathname]);
+    document.title = `${pageTitle} — Akjol CRM`;
+  }, [pageTitle]);
 
   useEffect(() => {
     if (!crm.ready) return;
@@ -186,7 +190,7 @@ export function Frame({ children }: { children: React.ReactNode }) {
       <div className="flex h-dvh min-w-0 flex-col">
         <header className="z-20 flex h-14 items-center gap-3 border-b border-[#e6e8ec] bg-white px-3">
           <button className="px-1 md:hidden" onClick={() => setOpen(true)} aria-label="Меню" type="button">Меню</button>
-          <h1 className="min-w-0 truncate text-base font-semibold">{TITLES[pathname] ?? "Akjol CRM"}</h1>
+          <h1 className="min-w-0 truncate text-base font-semibold">{pageTitle}</h1>
           <form
             className="ml-auto hidden min-w-0 max-w-xs flex-1 sm:block"
             onSubmit={(event) => {
