@@ -26,7 +26,13 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 14px;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
 }
+
+button, a, input, select, textarea { transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease, box-shadow 160ms ease; }
+
+a { text-decoration: none; }
 
 button, input, select, textarea { font: inherit; }
 
