@@ -29,7 +29,7 @@ const ADMIN_NAV: NavItem[] = [
 ];
 
 const DISPATCHER_NAV: NavItem[] = [
-  { href: "/", label: "Обзор", icon: "home" },
+  { href: "/", label: "Рабочее место диспетчера", icon: "home" },
   { href: "/drivers", label: "Водители", icon: "users" },
   { href: "/orders", label: "Заказы", icon: "orders" },
   { href: "/chats", label: "Чаты", icon: "chat" },
@@ -216,7 +216,7 @@ export function Frame({ children }: { children: React.ReactNode }) {
                   return (
                     <Link key={order.id} href={`/orders?order=${order.id}`} onClick={() => setNotices(false)} className="block px-3 py-2 hover:bg-[#f4f6f8]">
                       <span className="block text-sm font-medium">№{order.number} · {customer?.name ?? "Клиент"}</span>
-                      <span className="text-xs text-[#667085]">{order.hold === "needs_admin" ? "Нужен администратор" : order.hold === "no_answer" ? "Клиент не отве��ает" : order.hold === "no_driver" ? "Нет свободного водителя" : order.status === "awaiting_driver" ? "Нет водителя больше 10 минут" : "Новый заказ"}</span>
+                      <span className="text-xs text-[#667085]">{order.hold === "needs_admin" ? "Нужен администратор" : order.hold === "no_answer" ? "Клиент не отвечает" : order.hold === "no_driver" ? "Нет свободного водителя" : order.status === "awaiting_driver" ? "Нет водителя больше 10 минут" : "Новый заказ"}</span>
                     </Link>
                   );
                 })}

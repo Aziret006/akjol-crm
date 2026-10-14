@@ -93,7 +93,7 @@ function AdminHome() {
       <section className="crm-panel p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-semibold">Воронка заказов</h2>
-          <p className="text-sm text-[#667085]">Открытые заказы по этапам · закрытые — только за сегодня</p>
+          <p className="text-sm text-[#667085]">Открытые заказы по этапам · закрытые — за выбранный период</p>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
           {[...openFunnel, ...closedToday].map((item) => (
@@ -175,7 +175,7 @@ function AdminHome() {
             <h2 className="font-semibold">Регистрации по часам</h2>
             <span className="text-sm text-[#667085]">{bounds.label} · 08:00–20:00</span>
           </div>
-          <HourChart points={points} />
+          <HourChart points={points} periodLabel={bounds.label} />
           <p className="mt-2 text-xs text-[#667085]">
             Показываются регистрации за выбранный период.
             {outsideHours
@@ -275,7 +275,7 @@ function MetricIcon({ name }: { name: "orders" | "check" | "clock" | "cross" }) 
   );
 }
 
-function HourChart({ points }: { points: number[] }) {
+function HourChart({ points, periodLabel }: { points: number[]; periodLabel: string }) {
   const max = Math.max(1, ...points);
   const ticks = max <= 1 ? [0, 1] : [0, Math.round(max / 2), max];
   const coords = points.map((value, index) => {
@@ -295,7 +295,7 @@ function HourChart({ points }: { points: number[] }) {
           ))}
         </div>
         <div className="relative h-40 min-w-0 flex-1">
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full" role="img" aria-label="Заказы по часам за сегодня">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full" role="img" aria-label={`Регистрации по часам за ${periodLabel.toLowerCase()}`}>
             {ticks.map((tick) => {
               const y = 100 - (tick / max) * 100;
               return <line key={tick} x1="0" x2="100" y1={y} y2={y} stroke="#e6e8ec" vectorEffect="non-scaling-stroke" />;
