@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { DispatchDesk } from "@/components/dispatch-desk";
 import { LoginForm } from "@/components/login-form";
 import { OrderBadge } from "@/components/ui";
@@ -10,7 +11,7 @@ import { currentStatus, openShift, summarizeDate, workedMs } from "@/lib/attenda
 import { FUNNEL, canSeeOrder, ordersNeedingAttention } from "@/lib/orders";
 import { shiftSnapshot } from "@/lib/metrics";
 import { useCrm } from "@/lib/store";
-import { addDays, bishkekDateString, formatDuration, formatTime } from "@/lib/time";
+import { addDays, bishkekDateString, formatDuration, formatTime, inDateRange } from "@/lib/time";
 import type { WorkStatus } from "@/lib/types";
 
 const HOURS = Array.from({ length: 13 }, (_, index) => index + 8);
@@ -25,11 +26,18 @@ export default function HomePage() {
 function AdminHome() {
   const crm = useCrm();
   const user = crm.user;
+  const [range, setRange] = useState<"today" | "yesterday" | "7" | "30">("today");
   if (!user) return null;
   const today = bishkekDateString(new Date(crm.now));
   const yesterday = addDays(today, -1);
-  const todayOrders = crm.state.orders.filter((order) => bishkekDateString(new Date(order.createdAt)) === today);
-  const yesterdayCount = crm.state.orders.filter((order) => bishkekDateString(new Date(order.createdAt)) === yesterday).length;
+  const bounds = range === "today"
+    ? { from: today, to: today, label: "Сегодня" }
+    : range === "yesterday"
+      ? { from: yesterday, to: yesterday, label: "Вчера" }
+      : { from: addDays(today, range === "7" ? -6 : -29), to: today, label: range === "7" ? "7 дней" : "30 дней" };
+  const periodOrders = crm.state.orders.filter((order) => inDateRange(order.createdAt, bounds.from, bounds.to));
+  const todayOrders = periodOrders;
+  const yesterdayCount = crm.state.orders.filter((order) => inDateRange(order.createdAt, addDays(bounds.from, -1), addDays(bounds.to, -1))).length;
   const done = todayOrders.filter((order) => order.status === "done").length;
   const cancelled = todayOrders.filter((order) => order.status === "cancelled").length;
   const active = todayOrders.filter((order) => order.status !== "done" && order.status !== "cancelled").length;
@@ -62,11 +70,18 @@ function AdminHome() {
           <p className="mt-1 text-sm text-[#667085]">{longDay(crm.now)} · Бишкек</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center rounded-lg border border-[#e6e8ec] bg-white p-1" aria-label="Период статистики">
+            {([['today', 'Сегодня'], ['yesterday', 'Вчера'], ['7', '7 дней'], ['30', '30 дней']] as const).map(([value, label]) => (
+              <button key={value} type="button" onClick={() => setRange(value)} className={`rounded-md px-2.5 py-1.5 text-xs transition ${range === value ? "bg-[#e8f1fb] font-medium text-[#1d5fa7]" : "text-[#667085] hover:bg-[#f4f6f8]"}`}>{label}</button>
+            ))}
+          </div>
           <Link href="/orders" className="inline-flex h-9 items-center rounded-lg bg-[#2e6db4] px-3 text-sm font-medium text-white hover:bg-[#245a96]">К заказам</Link>
           <Link href="/time" className="inline-flex h-9 items-center rounded-lg border border-[#e6e8ec] bg-white px-3 text-sm hover:bg-[#f4f6f8]">Смены</Link>
           <span className="rounded-full bg-[#e8f1fb] px-3 py-1 text-sm text-[#1d5fa7]">{ROLE_LABEL.admin}</span>
         </div>
       </div>
+
+      <div className="flex items-center gap-2 text-xs text-[#667085]"><span className="h-2 w-2 animate-pulse rounded-full bg-[#1f7a45]" /> Данные обновляются автоматически · {bounds.label}</div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Metric tone="blue" label="Заказы сегодня" value={todayOrders.length} hint={delta == null ? "Вчера заказов не было" : `${delta > 0 ? "+" : ""}${delta}% к прошлому дню`} icon="orders" />
@@ -158,7 +173,7 @@ function AdminHome() {
         <section className="crm-panel min-w-0 p-4">
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-semibold">Заказы по часам</h2>
-            <span className="text-sm text-[#667085]">Сегодня, 08:00–20:00</span>
+            <span className="text-sm text-[#667085]">{bounds.label} · 08:00–20:00</span>
           </div>
           <HourChart points={points} />
           <p className="mt-2 text-xs text-[#667085]">
