@@ -1,16 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --background: #071a2b;
-  --foreground: #e7f0f8;
-  --line: #19344b;
-  --muted: #8ca5b9;
-  --accent: #1597ff;
-  --accent-strong: #0877d1;
-  --surface: #0b2438;
-  --surface-raised: #102d45;
-  --surface-soft: #0e2940;
-  --success: #22d39b;
+  --background: #f6f8fb;
+  --foreground: #172b4d;
+  --line: #e3e9f2;
+  --muted: #667085;
+  --accent: #2563eb;
+  --accent-strong: #1d4ed8;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-soft: #f8fafc;
+  --success: #12a878;
 }
 
 @theme inline {
@@ -22,7 +22,7 @@
 * { border-color: var(--line); }
 
 body {
-  background: radial-gradient(circle at 85% -20%, #123a58 0, transparent 38%), var(--background);
+  background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 14px;
@@ -32,37 +32,30 @@ button, input, select, textarea { font: inherit; }
 
 .crm-panel {
   border: 1px solid var(--line);
-  background: linear-gradient(145deg, rgba(16,45,69,.98), rgba(8,30,48,.98));
-  border-radius: 8px;
-  box-shadow: 0 10px 24px rgba(0,0,0,.14), inset 0 1px rgba(255,255,255,.025);
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: 0 4px 18px rgba(23, 43, 77, 0.06);
 }
 
-.crm-link { color: #54b7ff; }
-.crm-link:hover { color: #8bd2ff; text-decoration: underline; }
+.crm-link { color: #2563eb; }
+.crm-link:hover { color: #1d4ed8; text-decoration: underline; }
 
 .crm-table { width: 100%; text-align: left; }
-.crm-table thead { background: #0d2a42; color: #9cb3c5; }
+.crm-table thead { background: #f8fafc; color: #667085; }
 .crm-table th { padding: 10px 12px; font-weight: 600; font-size: 12px; }
 .crm-table td { padding: 10px 12px; border-top: 1px solid var(--line); }
-.crm-table tbody tr:hover { background: rgba(21,151,255,.08); }
+.crm-table tbody tr:hover { background: #f8fbff; }
 
-/* Shared dark CRM surface for pages that still use utility classes. */
+/* Shared light CRM design tokens and legacy page compatibility. */
 .bg-white { background-color: var(--surface) !important; }
-.bg-\[\#f7f8fa\], .bg-\[\#f8fafc\], .bg-\[\#f4f6f8\] { background-color: var(--surface-soft) !important; }
-.border-\[\#e6e8ec\] { border-color: var(--line) !important; }
-.text-\[\#1f2933\], .text-\[\#344054\], .text-\[\#52606d\] { color: var(--foreground) !important; }
-.text-\[\#667085\], .text-\[\#98a2b3\] { color: var(--muted) !important; }
-.hover-bg-soft:hover {
-  background-color: rgba(21,151,255,.08) !important;
-}
-
+.hover-bg-soft:hover { background-color: #f4f8fd !important; }
 
 input, select, textarea {
-  background: #081e31;
+  background: #ffffff;
   color: var(--foreground);
   border-color: var(--line);
 }
-input::placeholder, textarea::placeholder { color: #6f8ba0; }
+input::placeholder, textarea::placeholder { color: #98a2b3; }
 
 @media (max-width: 768px) {
   .crm-table { display: block; overflow-x: auto; white-space: nowrap; }
