@@ -4,8 +4,9 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { allows, type Permission } from "./access";
 import { currentStatus, nextEventType, openShift } from "./attendance";
 import { demoDrivers } from "./drivers";
+import { canEditDriver, normalizeDriver } from "./recruitment";
 import { fullName, ORDER_HOLD_LABEL, ORDER_SOURCE_LABEL, ORDER_STATUS_LABEL, SOURCE_LABEL } from "./labels";
-import { canAssignDriver, canSeeOrder, findCustomerByPhone, nextOrderNumber, normalizeOrder, similarOpenOrder, STATUS_TRANSITIONS } from "./orders";
+import { canAssignDriver, canSeeOrder, findCustomerByPhone, nextOrderNumber, normalizeOrder, phoneDigits, similarOpenOrder, STATUS_TRANSITIONS } from "./orders";
 import { createSeed } from "./seed";
 import { formatDateTime, isoAt, sha256 } from "./time";
 import type {
@@ -13,7 +14,10 @@ import type {
   ActionResult,
   AttendanceType,
   CrmState,
+  DocKind,
+  DocStatus,
   DriverAvailability,
+  LeadSource,
   Order,
   OrderEvent,
   OrderHold,
@@ -21,8 +25,10 @@ import type {
   OrderSource,
   OrderStatus,
   PaymentMethod,
+  RecruitStage,
   RequestStatus,
   Role,
+  StopReason,
   SourceKind,
   User,
 } from "./types";
@@ -42,6 +48,9 @@ const EMPTY_STATE: CrmState = {
   notes: [],
   audit: [],
   drivers: [],
+  driverTasks: [],
+  driverNotes: [],
+  ratings: [],
   orders: [],
   orderEvents: [],
   session: null,
@@ -109,6 +118,15 @@ type CrmApi = {
   reopenOrder: (orderId: string, reason: string) => ActionResult;
   reassignOrderDispatcher: (orderId: string, dispatcherId: string) => ActionResult;
   setDriverAvailability: (driverId: string, availability: DriverAvailability) => ActionResult;
+  saveLead: (input: { firstName: string; lastName: string; phone: string; source: LeadSource; city: string }) => ActionResult;
+  setRecruitStage: (driverId: string, stage: RecruitStage, reason?: StopReason | null, note?: string) => ActionResult;
+  saveDriverProfile: (driverId: string, patch: Partial<Pick<import("./types").Driver, "firstName" | "lastName" | "phone" | "city" | "address" | "citizenship" | "inn" | "licenseNumber" | "plate" | "carModel" | "carColor" | "carYear" | "carCategory" | "pitchNoted" | "note">>) => ActionResult;
+  setDriverDoc: (driverId: string, kind: DocKind, status: DocStatus) => ActionResult;
+  addDriverNote: (driverId: string, text: string) => ActionResult;
+  addDriverTask: (driverId: string, title: string, dueAt: string, priority: "normal" | "high") => ActionResult;
+  completeDriverTask: (taskId: string) => ActionResult;
+  deleteDriver: (driverId: string, reason: string) => ActionResult;
+  recordRating: (driverId: string, dispatcherId: string, score: number) => ActionResult;
   resetDemo: () => void;
 };
 
@@ -156,7 +174,10 @@ function loadState(): CrmState {
     if (parsed.version !== 1 || !Array.isArray(parsed.users) || parsed.users.length === 0) return createSeed();
     return {
       ...parsed,
-      drivers: Array.isArray(parsed.drivers) ? parsed.drivers : demoDrivers(),
+      drivers: (Array.isArray(parsed.drivers) ? parsed.drivers : demoDrivers()).map((driver) => normalizeDriver(driver)),
+      driverTasks: Array.isArray(parsed.driverTasks) ? parsed.driverTasks : [],
+      driverNotes: Array.isArray(parsed.driverNotes) ? parsed.driverNotes : [],
+      ratings: Array.isArray(parsed.ratings) ? parsed.ratings : [],
       orders: Array.isArray(parsed.orders) ? parsed.orders.map((order) => normalizeOrder(order)) : [],
       orderEvents: Array.isArray(parsed.orderEvents) ? parsed.orderEvents : [],
     };
@@ -968,6 +989,173 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
             driverId,
           ),
         );
+        return ok();
+      },
+      saveLead(input) {
+        const current = requireState();
+        const denied = deny(actor, viewing, "drivers.edit");
+        if (denied || !actor || !user) return fail(denied ?? "Недостаточно прав");
+        const phone = input.phone.trim();
+        const firstName = input.firstName.trim();
+        const lastName = input.lastName.trim();
+        if (phoneDigits(phone).length < 9) return fail("Укажите телефон");
+        if (firstName.length < 2) return fail("Укажите имя");
+        const duplicate = current.drivers.find((item) => phoneDigits(item.phone) === phoneDigits(phone));
+        if (duplicate) return fail(`Такой телефон уже есть: ${fullName(duplicate)}`);
+        const nowIso = new Date().toISOString();
+        const driver = normalizeDriver({
+          id: uid(),
+          firstName,
+          lastName,
+          phone,
+          availability: "offline",
+          vehicle: null,
+          note: "",
+          createdAt: nowIso,
+          city: input.city.trim() || "Бишкек",
+          address: "",
+          citizenship: "",
+          inn: "",
+          licenseNumber: "",
+          plate: "",
+          carModel: "",
+          carColor: "",
+          carYear: null,
+          carCategory: "",
+          docs: { passport: "missing", license: "missing", sts: "missing", insurance: "missing", inspection: "missing" },
+          stage: "application",
+          stopReason: null,
+          stopNote: "",
+          source: input.source,
+          ownerId: actor.role === "dispatcher" ? actor.id : null,
+          stageLog: [{ stage: "application", at: nowIso, actorId: actor.id }],
+          pitchNoted: false,
+          demo: false,
+        });
+        setState(withAudit({ ...current, drivers: [driver, ...current.drivers] }, actor.id, "Заявка водителя", `${fullName(driver)} · ${phone}`, "driver", driver.id));
+        return { ok: true, orderId: driver.id };
+      },
+      setRecruitStage(driverId, stage, reason, note) {
+        const current = requireState();
+        if (!actor || !user || viewing) return fail("Недостаточно прав");
+        const driver = current.drivers.find((item) => item.id === driverId);
+        if (!driver) return fail("Водитель не найден");
+        if (!canEditDriver(driver, user.id, allows(actor.role, "drivers.view_all"))) return fail("Эта заявка закреплена за другим диспетчером");
+        if (stage === "stopped" && !reason) return fail("Укажите причину остановки");
+        if (stage === driver.stage && stage !== "stopped") return ok();
+        const nowIso = new Date().toISOString();
+        const ownerId = driver.ownerId || (actor.role === "dispatcher" ? actor.id : driver.ownerId);
+        const next = normalizeDriver({
+          ...driver,
+          stage,
+          ownerId,
+          stopReason: stage === "stopped" ? reason ?? null : null,
+          stopNote: stage === "stopped" ? (note ?? "").trim() : "",
+          availability: stage === "first_order" ? "available" : driver.availability,
+          stageLog: [...driver.stageLog, { stage, at: nowIso, actorId: actor.id }],
+        });
+        setState(withAudit({ ...current, drivers: current.drivers.map((item) => (item.id === driverId ? next : item)) }, actor.id, "Этап водителя", `${fullName(driver)} → ${stage}`, "driver", driverId));
+        return ok();
+      },
+      saveDriverProfile(driverId, patch) {
+        const current = requireState();
+        if (!actor || !user || viewing) return fail("Недостаточно прав");
+        const driver = current.drivers.find((item) => item.id === driverId);
+        if (!driver) return fail("Водитель не найден");
+        if (!canEditDriver(driver, user.id, allows(actor.role, "drivers.view_all"))) return fail("Недостаточно прав");
+        const phone = patch.phone?.trim() ?? driver.phone;
+        if (phoneDigits(phone).length < 9) return fail("Укажите телефон");
+        const clash = current.drivers.find((item) => item.id !== driver.id && phoneDigits(item.phone) === phoneDigits(phone));
+        if (clash) return fail("Телефон уже занят другой карточкой");
+        const next = normalizeDriver({
+          ...driver,
+          ...patch,
+          phone,
+          firstName: patch.firstName?.trim() || driver.firstName,
+          lastName: patch.lastName?.trim() ?? driver.lastName,
+          demo: driver.demo,
+        });
+        setState(withAudit({ ...current, drivers: current.drivers.map((item) => (item.id === driverId ? next : item)) }, actor.id, "Карточка водителя", fullName(next), "driver", driverId));
+        return ok();
+      },
+      setDriverDoc(driverId, kind, status) {
+        const current = requireState();
+        if (!actor || !user || viewing) return fail("Недостаточно прав");
+        const driver = current.drivers.find((item) => item.id === driverId);
+        if (!driver) return fail("Водитель не найден");
+        if (!canEditDriver(driver, user.id, allows(actor.role, "drivers.view_all"))) return fail("Недостаточно прав");
+        const next = normalizeDriver({ ...driver, docs: { ...driver.docs, [kind]: status } });
+        setState(withAudit({ ...current, drivers: current.drivers.map((item) => (item.id === driverId ? next : item)) }, actor.id, "Документ водителя", `${fullName(driver)} · ${kind}`, "driver", driverId));
+        return ok();
+      },
+      addDriverNote(driverId, text) {
+        const current = requireState();
+        if (!actor || !user || viewing) return fail("Недостаточно прав");
+        const driver = current.drivers.find((item) => item.id === driverId);
+        if (!driver) return fail("Водитель не найден");
+        if (!canEditDriver(driver, user.id, allows(actor.role, "drivers.view_all"))) return fail("Недостаточно прав");
+        const clean = text.trim();
+        if (clean.length < 2) return fail("Введите заметку");
+        setState(withAudit({
+          ...current,
+          driverNotes: [{ id: uid(), driverId, authorId: actor.id, text: clean, at: new Date().toISOString() }, ...current.driverNotes],
+        }, actor.id, "Заметка по водителю", fullName(driver), "driver", driverId));
+        return ok();
+      },
+      addDriverTask(driverId, title, dueAt, priority) {
+        const current = requireState();
+        if (!actor || !user || viewing) return fail("Недостаточно прав");
+        const driver = current.drivers.find((item) => item.id === driverId);
+        if (!driver) return fail("Водитель не найден");
+        if (!canEditDriver(driver, user.id, allows(actor.role, "drivers.view_all"))) return fail("Недостаточно прав");
+        const clean = title.trim();
+        if (clean.length < 3) return fail("Опишите задачу");
+        if (!dueAt) return fail("Укажите срок");
+        const assigneeId = driver.ownerId || actor.id;
+        setState({
+          ...current,
+          driverTasks: [{ id: uid(), driverId, assigneeId, title: clean, dueAt, doneAt: null, priority, createdAt: new Date().toISOString() }, ...current.driverTasks],
+        });
+        return ok();
+      },
+      completeDriverTask(taskId) {
+        const current = requireState();
+        if (!actor || viewing) return fail("Недостаточно прав");
+        const task = current.driverTasks.find((item) => item.id === taskId);
+        if (!task) return fail("Задача не найдена");
+        if (actor.role !== "admin" && task.assigneeId !== actor.id) return fail("Это задача другого диспетчера");
+        setState({
+          ...current,
+          driverTasks: current.driverTasks.map((item) => (item.id === taskId ? { ...item, doneAt: new Date().toISOString() } : item)),
+        });
+        return ok();
+      },
+      deleteDriver(driverId, reason) {
+        const current = requireState();
+        const denied = deny(actor, viewing, "drivers.delete");
+        if (denied || !actor) return fail(denied ?? "Удалять водителей может только администратор");
+        const driver = current.drivers.find((item) => item.id === driverId);
+        if (!driver) return fail("Водитель не найден");
+        if (reason.trim().length < 3) return fail("Укажите причину");
+        const active = current.orders.some((order) => order.driverId === driverId && order.status !== "done" && order.status !== "cancelled");
+        if (active) return fail("У водителя есть открытый заказ. Сначала закройте его.");
+        setState(withAudit({
+          ...current,
+          drivers: current.drivers.filter((item) => item.id !== driverId),
+        }, actor.id, "Водитель удалён", `${fullName(driver)}: ${reason.trim()}`, "driver", driverId));
+        return ok();
+      },
+      recordRating(driverId, dispatcherId, score) {
+        const current = requireState();
+        if (!actor || viewing || actor.role !== "admin") return fail("Оценку вручную может записать только администратор");
+        if (score < 1 || score > 5) return fail("Оценка от 1 до 5");
+        const driver = current.drivers.find((item) => item.id === driverId);
+        const dispatcher = current.users.find((item) => item.id === dispatcherId && item.role === "dispatcher");
+        if (!driver || !dispatcher) return fail("Водитель или диспетчер не найден");
+        setState(withAudit({
+          ...current,
+          ratings: [{ id: uid(), driverId, dispatcherId, score, at: new Date().toISOString(), channel: "manual" }, ...current.ratings],
+        }, actor.id, "Оценка диспетчера", `${fullName(dispatcher)} · ${score} · вручную, не из WhatsApp`, "user", dispatcherId));
         return ok();
       },
       markRead(conversationId) {

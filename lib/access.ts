@@ -9,7 +9,11 @@ export type Permission =
   | "orders.assign_driver"
   | "orders.reassign_dispatcher"
   | "orders.reopen"
-  | "audit.view";
+  | "audit.view"
+  | "drivers.view_all"
+  | "drivers.edit"
+  | "drivers.delete"
+  | "recruitment.view";
 
 const DISPATCHER: Permission[] = [
   "orders.view_assigned",
@@ -17,6 +21,7 @@ const DISPATCHER: Permission[] = [
   "orders.edit",
   "orders.cancel",
   "orders.assign_driver",
+  "drivers.edit",
 ];
 
 export function allows(role: Role, permission: Permission) {

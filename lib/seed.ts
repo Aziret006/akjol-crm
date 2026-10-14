@@ -374,6 +374,9 @@ export function createSeed(): CrmState {
       },
     ],
     drivers: demoDrivers(),
+    driverTasks: [],
+    driverNotes: [],
+    ratings: [],
     orders: [],
     orderEvents: [],
     audit: [

@@ -16,6 +16,8 @@ type NavItem = { href: string; label: string; icon: IconName };
 
 const ADMIN_NAV: NavItem[] = [
   { href: "/", label: "Обзор", icon: "home" },
+  { href: "/recruitment", label: "Рекрутинг", icon: "chart" },
+  { href: "/drivers", label: "Водители", icon: "users" },
   { href: "/orders", label: "Заказы", icon: "orders" },
   { href: "/chats", label: "Чаты", icon: "chat" },
   { href: "/sources", label: "Источники", icon: "source" },
@@ -28,9 +30,9 @@ const ADMIN_NAV: NavItem[] = [
 
 const DISPATCHER_NAV: NavItem[] = [
   { href: "/", label: "Обзор", icon: "home" },
+  { href: "/drivers", label: "Водители", icon: "users" },
   { href: "/orders", label: "Заказы", icon: "orders" },
   { href: "/chats", label: "Чаты", icon: "chat" },
-  { href: "/requests", label: "Заявки", icon: "inbox" },
   { href: "/time", label: "Рабочее время", icon: "clock" },
   { href: "/shifts", label: "История смен", icon: "list" },
 ];
@@ -38,6 +40,8 @@ const DISPATCHER_NAV: NavItem[] = [
 const TITLES: Record<string, string> = {
   "/": "Обзор",
   "/orders": "Заказы",
+  "/drivers": "Водители",
+  "/recruitment": "Рекрутинг",
   "/chats": "Чаты",
   "/sources": "Источники",
   "/employees": "Сотрудники",
@@ -45,8 +49,20 @@ const TITLES: Record<string, string> = {
   "/analytics": "Аналитика",
   "/audit": "Журнал",
   "/telephony": "Телефония",
+  "/platform": "Платформа",
+  "/platform/companies": "Компании",
+  "/platform/users": "Пользователи",
+  "/platform/plans": "Тарифы",
+  "/platform/finance": "Финансы",
+  "/platform/agents": "AI-агенты",
+  "/platform/integrations": "Интеграции",
+  "/platform/support": "Поддержка",
+  "/platform/notices": "Уведомления",
+  "/platform/journal": "Журнал платформы",
+  "/platform/roles": "Роли платформы",
   "/settings": "Настройки",
   "/requests": "Заявки",
+  "/workspace": "Рабочее место",
   "/shifts": "История смен",
   "/profile": "Профиль",
   "/login": "Вход",
@@ -108,6 +124,7 @@ export function Frame({ children }: { children: React.ReactNode }) {
   }
 
   if (!crm.user) return <div className="min-h-dvh bg-[#f7f8fa]">{children}</div>;
+  if (pathname === "/workspace") return <>{children}</>;
   const user = crm.user;
 
   const nav = crm.isAdmin ? ADMIN_NAV : DISPATCHER_NAV;
@@ -131,7 +148,7 @@ export function Frame({ children }: { children: React.ReactNode }) {
         </div>
         <nav className="flex-1 overflow-auto px-2 py-2">
           {nav.map((item) => {
-            const active = pathname === item.href;
+            const active = item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
                 key={item.href}

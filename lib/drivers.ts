@@ -1,30 +1,68 @@
+import { normalizeDriver } from "./recruitment";
 import type { Driver } from "./types";
 import { addDays, bishkekDateString, isoAt } from "./time";
 
 export function demoDrivers(now = new Date()): Driver[] {
-  const createdAt = isoAt(addDays(bishkekDateString(now), -30), "10:00");
+  const createdAt = isoAt(addDays(bishkekDateString(now), -12), "10:00");
+  const recent = isoAt(addDays(bishkekDateString(now), 0), "09:10");
+  const blank = {
+    city: "Бишкек",
+    address: "",
+    citizenship: "Кыргызстан",
+    inn: "",
+    licenseNumber: "",
+    plate: "",
+    carModel: "",
+    carColor: "",
+    carYear: null,
+    carCategory: "",
+    docs: { passport: "missing" as const, license: "missing" as const, sts: "missing" as const, insurance: "missing" as const, inspection: "missing" as const },
+    stopReason: null,
+    stopNote: "",
+    pitchNoted: false,
+    demo: true as const,
+  };
   return [
-    {
+    normalizeDriver({
+      ...blank,
       id: "drv-kubat",
       firstName: "Кубат",
       lastName: "Асанов",
       phone: "+996 555 20 01 01",
       availability: "available",
       vehicle: "01 123 ABC · Toyota",
+      plate: "01 123 ABC",
+      carModel: "Toyota",
       note: "Демо-водитель",
       createdAt,
-    },
-    {
+      stage: "activation",
+      source: "referral",
+      ownerId: "u-aigul",
+      docs: { ...blank.docs, passport: "verified", license: "received" },
+      stageLog: [
+        { stage: "application", at: createdAt, actorId: "u-aigul" },
+        { stage: "activation", at: createdAt, actorId: "u-aigul" },
+      ],
+    }),
+    normalizeDriver({
+      ...blank,
       id: "drv-nursultan",
       firstName: "Нурсултан",
       lastName: "Исаев",
       phone: "+996 700 20 01 02",
       availability: "available",
       vehicle: "01 456 DEF · Hyundai",
+      plate: "01 456 DEF",
+      carModel: "Hyundai",
       note: "Демо-водитель",
       createdAt,
-    },
-    {
+      stage: "documents",
+      source: "offline",
+      ownerId: "u-aigul",
+      stageLog: [{ stage: "documents", at: createdAt, actorId: "u-aigul" }],
+    }),
+    normalizeDriver({
+      ...blank,
       id: "drv-timur",
       firstName: "Тимур",
       lastName: "Садыков",
@@ -32,17 +70,33 @@ export function demoDrivers(now = new Date()): Driver[] {
       availability: "available",
       vehicle: null,
       note: "Демо-водитель, автомобиль не закреплён",
-      createdAt,
-    },
-    {
+      createdAt: recent,
+      stage: "call",
+      source: "target",
+      ownerId: null,
+      stageLog: [{ stage: "call", at: recent, actorId: null }],
+    }),
+    normalizeDriver({
+      ...blank,
       id: "drv-azamat",
       firstName: "Азамат",
       lastName: "Керимбеков",
       phone: "+996 555 20 01 03",
       availability: "offline",
       vehicle: "02 789 GHI · Kia",
+      plate: "02 789 GHI",
+      carModel: "Kia",
       note: "Демо-водитель, не на линии",
       createdAt,
-    },
+      stage: "stopped",
+      stopReason: "car_problem",
+      stopNote: "Демо-причина, не звонок",
+      source: "partner",
+      ownerId: "u-nurlan",
+      stageLog: [
+        { stage: "application", at: createdAt, actorId: "u-nurlan" },
+        { stage: "stopped", at: createdAt, actorId: "u-nurlan" },
+      ],
+    }),
   ];
 }

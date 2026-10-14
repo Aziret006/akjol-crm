@@ -121,6 +121,22 @@ export type Note = {
   at: string;
 };
 
+export type RecruitStage = "application" | "call" | "documents" | "srmk" | "activation" | "first_order" | "stopped";
+
+export type StopReason = "no_license" | "competitor" | "car_problem" | "app_unclear" | "no_answer" | "other";
+
+export type LeadSource = "target" | "referral" | "offline" | "partner" | "phone" | "whatsapp" | "other";
+
+export type DocKind = "passport" | "license" | "sts" | "insurance" | "inspection";
+
+export type DocStatus = "missing" | "received" | "verified" | "rejected";
+
+export type StageMark = {
+  stage: RecruitStage;
+  at: string;
+  actorId: string | null;
+};
+
 export type Driver = {
   id: string;
   firstName: string;
@@ -130,6 +146,53 @@ export type Driver = {
   vehicle: string | null;
   note: string;
   createdAt: string;
+  city: string;
+  address: string;
+  citizenship: string;
+  inn: string;
+  licenseNumber: string;
+  plate: string;
+  carModel: string;
+  carColor: string;
+  carYear: number | null;
+  carCategory: string;
+  docs: Record<DocKind, DocStatus>;
+  stage: RecruitStage;
+  stopReason: StopReason | null;
+  stopNote: string;
+  source: LeadSource;
+  ownerId: string | null;
+  stageLog: StageMark[];
+  pitchNoted: boolean;
+  demo: boolean;
+};
+
+export type DriverTask = {
+  id: string;
+  driverId: string;
+  assigneeId: string;
+  title: string;
+  dueAt: string;
+  doneAt: string | null;
+  priority: "normal" | "high";
+  createdAt: string;
+};
+
+export type DriverNote = {
+  id: string;
+  driverId: string;
+  authorId: string;
+  text: string;
+  at: string;
+};
+
+export type DispatcherRating = {
+  id: string;
+  dispatcherId: string;
+  driverId: string;
+  score: number;
+  at: string;
+  channel: "manual";
 };
 
 export type Order = {
@@ -195,6 +258,9 @@ export type CrmState = {
   notes: Note[];
   audit: AuditEntry[];
   drivers: Driver[];
+  driverTasks: DriverTask[];
+  driverNotes: DriverNote[];
+  ratings: DispatcherRating[];
   orders: Order[];
   orderEvents: OrderEvent[];
   session: Session | null;
