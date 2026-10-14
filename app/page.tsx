@@ -66,7 +66,7 @@ function AdminHome() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Обзор таксопарка</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">Панель администратора</h2>
           <p className="mt-1 text-sm text-[#667085]">{longDay(crm.now)} · Бишкек</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -97,7 +97,7 @@ function AdminHome() {
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
           {[...openFunnel, ...closedToday].map((item) => (
-            <Link key={item.status} href="/orders" className="rounded-lg border border-[#e6e8ec] bg-[#f8fafc] px-3 py-3 hover:border-[#c5d4e8]">
+            <Link key={item.status} href="/orders" className="rounded-lg border border-[#e6e8ec] bg-[#f8fafc] px-3 py-3 text-[#1f2933] hover:border-[#c5d4e8] hover:text-[#1f2933]">
               <p className="text-xs text-[#667085]">{ORDER_STATUS_LABEL[item.status]}</p>
               <p className="mt-1 text-2xl font-semibold tabular-nums">{item.count}</p>
             </Link>
@@ -177,9 +177,9 @@ function AdminHome() {
           </div>
           <HourChart points={points} />
           <p className="mt-2 text-xs text-[#667085]">
-            Показываются регистрации, созданные сегодня.
+            Показываются регистрации за выбранный период.
             {outsideHours
-              ? ` ${outsideHours} ${outsideHours === 1 ? "заказ создан" : "заказа создано"} вне 08:00–20:00, поэтому на линии их нет.`
+              ? ` ${outsideHours} ${outsideHours === 1 ? "регистрация создана" : "регистрации созданы"} вне 08:00–20:00, поэтому на линии их нет.`
               : " Нулевая линия означает, что в эти часы регистраций не было."}
           </p>
         </section>

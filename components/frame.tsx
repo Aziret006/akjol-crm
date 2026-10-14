@@ -15,7 +15,7 @@ import { TelephonyBridge } from "./telephony-bridge";
 type NavItem = { href: string; label: string; icon: IconName };
 
 const ADMIN_NAV: NavItem[] = [
-  { href: "/", label: "Обзор", icon: "home" },
+  { href: "/", label: "Панель администратора", icon: "home" },
   { href: "/recruitment", label: "Рекрутинг", icon: "chart" },
   { href: "/drivers", label: "Водители", icon: "users" },
   { href: "/orders", label: "Заказы", icon: "orders" },
@@ -38,7 +38,7 @@ const DISPATCHER_NAV: NavItem[] = [
 ];
 
 const TITLES: Record<string, string> = {
-  "/": "Обзор",
+  "/": "Панель администратора",
   "/orders": "Заказы",
   "/drivers": "Водители",
   "/recruitment": "Рекрутинг",
