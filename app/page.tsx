@@ -84,7 +84,7 @@ function AdminHome() {
       <div className="flex items-center gap-2 text-xs text-[#667085]"><span className="h-2 w-2 animate-pulse rounded-full bg-[#1f7a45]" /> Данные обновляются автоматически · {bounds.label}</div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric tone="blue" label="Заказы сегодня" value={todayOrders.length} hint={delta == null ? "Вчера заказов не было" : `${delta > 0 ? "+" : ""}${delta}% к прошлому дню`} icon="orders" />
+        <Metric tone="blue" label="Регистрации сегодня" value={todayOrders.length} hint={delta == null ? "Вчера регистраций не было" : `${delta > 0 ? "+" : ""}${delta}% к прошлому дню`} icon="orders" />
         <Metric tone="green" label="Выполнено" value={done} hint={share(done, todayOrders.length, "от всех заказов")} icon="check" />
         <Metric tone="amber" label="В работе" value={active} hint={active ? "Требуют контроля" : "Сейчас нет"} icon="clock" />
         <Metric tone="rose" label="Отменено" value={cancelled} hint={share(cancelled, todayOrders.length, "от заказов")} icon="cross" />
@@ -172,15 +172,15 @@ function AdminHome() {
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <section className="crm-panel min-w-0 p-4">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="font-semibold">Заказы по часам</h2>
+            <h2 className="font-semibold">Регистрации по часам</h2>
             <span className="text-sm text-[#667085]">{bounds.label} · 08:00–20:00</span>
           </div>
           <HourChart points={points} />
           <p className="mt-2 text-xs text-[#667085]">
-            Только заказы, созданные сегодня.
+            Показываются регистрации, созданные сегодня.
             {outsideHours
               ? ` ${outsideHours} ${outsideHours === 1 ? "заказ создан" : "заказа создано"} вне 08:00–20:00, поэтому на линии их нет.`
-              : " Нулевая линия означает, что в эти часы заказов не было."}
+              : " Нулевая линия означает, что в эти часы регистраций не было."}
           </p>
         </section>
         <section className="crm-panel">
@@ -204,7 +204,7 @@ function AdminHome() {
 }
 
 function share(part: number, total: number, tail: string) {
-  if (!total) return "Заказов сегодня нет";
+  if (!total) return "Нет данных за период";
   const percent = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 }).format((part / total) * 100);
   return `${percent}% ${tail}`;
 }
