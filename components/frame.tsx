@@ -15,13 +15,13 @@ import { TelephonyBridge } from "./telephony-bridge";
 type NavItem = { href: string; label: string; icon: IconName };
 
 const ADMIN_NAV: NavItem[] = [
-  { href: "/", label: "Обзор", icon: "home" },
+  { href: "/", label: "Панель администратора", icon: "home" },
   { href: "/recruitment", label: "Рекрутинг", icon: "chart" },
   { href: "/drivers", label: "Водители", icon: "users" },
   { href: "/orders", label: "Заказы", icon: "orders" },
   { href: "/chats", label: "Чаты", icon: "chat" },
   { href: "/sources", label: "Источники", icon: "source" },
-  { href: "/employees", label: "Сотрудники", icon: "users" },
+  { href: "/employees", label: "Диспетчеры", icon: "users" },
   { href: "/time", label: "Рабочее время", icon: "clock" },
   { href: "/analytics", label: "Аналитика", icon: "chart" },
   { href: "/audit", label: "Журнал", icon: "list" },
@@ -29,7 +29,7 @@ const ADMIN_NAV: NavItem[] = [
 ];
 
 const DISPATCHER_NAV: NavItem[] = [
-  { href: "/", label: "Обзор", icon: "home" },
+  { href: "/", label: "Рабочее место диспетчера", icon: "home" },
   { href: "/drivers", label: "Водители", icon: "users" },
   { href: "/orders", label: "Заказы", icon: "orders" },
   { href: "/chats", label: "Чаты", icon: "chat" },
@@ -38,13 +38,13 @@ const DISPATCHER_NAV: NavItem[] = [
 ];
 
 const TITLES: Record<string, string> = {
-  "/": "Обзор",
+  "/": "Панель администратора",
   "/orders": "Заказы",
   "/drivers": "Водители",
   "/recruitment": "Рекрутинг",
   "/chats": "Чаты",
   "/sources": "Источники",
-  "/employees": "Сотрудники",
+  "/employees": "Диспетчеры",
   "/time": "Рабочее время",
   "/analytics": "Аналитика",
   "/audit": "Журнал",

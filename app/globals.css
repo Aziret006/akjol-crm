@@ -1,70 +1,68 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f8fa;
-  --foreground: #1f2933;
-  --line: #e6e8ec;
+  --background: #f6f8fb;
+  --foreground: #172b4d;
+  --line: #e3e9f2;
   --muted: #667085;
-  --accent: #2e6db4;
-  --accent-strong: #245a96;
+  --accent: #2563eb;
+  --accent-strong: #1d4ed8;
   --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-soft: #f8fafc;
+  --success: #12a878;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Segoe UI", system-ui, sans-serif;
+  --font-sans: "Inter", "Segoe UI", system-ui, sans-serif;
 }
+
+* { border-color: var(--line); }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 14px;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
 }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
+button, a, input, select, textarea { transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease, box-shadow 160ms ease; }
+
+a { text-decoration: none; }
+
+button, input, select, textarea { font: inherit; }
 
 .crm-panel {
   border: 1px solid var(--line);
   background: var(--surface);
-  border-radius: 10px;
+  border-radius: 12px;
+  box-shadow: 0 4px 18px rgba(23, 43, 77, 0.06);
 }
 
-.crm-link {
-  color: var(--accent);
-}
+.crm-link { color: #2563eb; }
+.crm-link:hover { color: #1d4ed8; text-decoration: underline; }
 
-.crm-link:hover {
-  text-decoration: underline;
-}
+.crm-table { width: 100%; text-align: left; }
+.crm-table thead { background: #f8fafc; color: #667085; }
+.crm-table th { padding: 10px 12px; font-weight: 600; font-size: 12px; }
+.crm-table td { padding: 10px 12px; border-top: 1px solid var(--line); }
+.crm-table tbody tr:hover { background: #f8fbff; }
 
-.crm-table {
-  width: 100%;
-  text-align: left;
-}
+/* Shared light CRM design tokens and legacy page compatibility. */
+.bg-white { background-color: var(--surface) !important; }
+.hover-bg-soft:hover { background-color: #f4f8fd !important; }
 
-.crm-table thead {
-  background: #f7f8fa;
-  color: #52606d;
+input, select, textarea {
+  background: #ffffff;
+  color: var(--foreground);
+  border-color: var(--line);
 }
+input::placeholder, textarea::placeholder { color: #98a2b3; }
 
-.crm-table th {
-  padding: 10px 12px;
-  font-weight: 600;
-  font-size: 12px;
-}
-
-.crm-table td {
-  padding: 10px 12px;
-  border-top: 1px solid var(--line);
-}
-
-.crm-table tbody tr:hover {
-  background: #f8fafc;
+@media (max-width: 768px) {
+  .crm-table { display: block; overflow-x: auto; white-space: nowrap; }
 }

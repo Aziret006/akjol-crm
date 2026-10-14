@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { DispatchDesk } from "@/components/dispatch-desk";
 import { LoginForm } from "@/components/login-form";
 import { OrderBadge } from "@/components/ui";
@@ -10,7 +11,7 @@ import { currentStatus, openShift, summarizeDate, workedMs } from "@/lib/attenda
 import { FUNNEL, canSeeOrder, ordersNeedingAttention } from "@/lib/orders";
 import { shiftSnapshot } from "@/lib/metrics";
 import { useCrm } from "@/lib/store";
-import { addDays, bishkekDateString, formatDuration, formatTime } from "@/lib/time";
+import { addDays, bishkekDateString, formatDuration, formatTime, inDateRange } from "@/lib/time";
 import type { WorkStatus } from "@/lib/types";
 
 const HOURS = Array.from({ length: 13 }, (_, index) => index + 8);
@@ -25,11 +26,18 @@ export default function HomePage() {
 function AdminHome() {
   const crm = useCrm();
   const user = crm.user;
+  const [range, setRange] = useState<"today" | "yesterday" | "7" | "30">("today");
   if (!user) return null;
   const today = bishkekDateString(new Date(crm.now));
   const yesterday = addDays(today, -1);
-  const todayOrders = crm.state.orders.filter((order) => bishkekDateString(new Date(order.createdAt)) === today);
-  const yesterdayCount = crm.state.orders.filter((order) => bishkekDateString(new Date(order.createdAt)) === yesterday).length;
+  const bounds = range === "today"
+    ? { from: today, to: today, label: "Сегодня" }
+    : range === "yesterday"
+      ? { from: yesterday, to: yesterday, label: "Вчера" }
+      : { from: addDays(today, range === "7" ? -6 : -29), to: today, label: range === "7" ? "7 дней" : "30 дней" };
+  const periodOrders = crm.state.orders.filter((order) => inDateRange(order.createdAt, bounds.from, bounds.to));
+  const todayOrders = periodOrders;
+  const yesterdayCount = crm.state.orders.filter((order) => inDateRange(order.createdAt, addDays(bounds.from, -1), addDays(bounds.to, -1))).length;
   const done = todayOrders.filter((order) => order.status === "done").length;
   const cancelled = todayOrders.filter((order) => order.status === "cancelled").length;
   const active = todayOrders.filter((order) => order.status !== "done" && order.status !== "cancelled").length;
@@ -58,18 +66,25 @@ function AdminHome() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Обзор таксопарка</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">Панель администратора</h2>
           <p className="mt-1 text-sm text-[#667085]">{longDay(crm.now)} · Бишкек</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center rounded-lg border border-[#e6e8ec] bg-white p-1" aria-label="Период статистики">
+            {([['today', 'Сегодня'], ['yesterday', 'Вчера'], ['7', '7 дней'], ['30', '30 дней']] as const).map(([value, label]) => (
+              <button key={value} type="button" onClick={() => setRange(value)} className={`rounded-md px-2.5 py-1.5 text-xs transition ${range === value ? "bg-[#e8f1fb] font-medium text-[#1d5fa7]" : "text-[#667085] hover:bg-[#f4f6f8]"}`}>{label}</button>
+            ))}
+          </div>
           <Link href="/orders" className="inline-flex h-9 items-center rounded-lg bg-[#2e6db4] px-3 text-sm font-medium text-white hover:bg-[#245a96]">К заказам</Link>
           <Link href="/time" className="inline-flex h-9 items-center rounded-lg border border-[#e6e8ec] bg-white px-3 text-sm hover:bg-[#f4f6f8]">Смены</Link>
           <span className="rounded-full bg-[#e8f1fb] px-3 py-1 text-sm text-[#1d5fa7]">{ROLE_LABEL.admin}</span>
         </div>
       </div>
 
+      <div className="flex items-center gap-2 text-xs text-[#667085]"><span className="h-2 w-2 animate-pulse rounded-full bg-[#1f7a45]" /> Данные обновляются автоматически · {bounds.label}</div>
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric tone="blue" label="Заказы сегодня" value={todayOrders.length} hint={delta == null ? "Вчера заказов не было" : `${delta > 0 ? "+" : ""}${delta}% к прошлому дню`} icon="orders" />
+        <Metric tone="blue" label="Регистрации сегодня" value={todayOrders.length} hint={delta == null ? "Вчера регистраций не было" : `${delta > 0 ? "+" : ""}${delta}% к прошлому дню`} icon="orders" />
         <Metric tone="green" label="Выполнено" value={done} hint={share(done, todayOrders.length, "от всех заказов")} icon="check" />
         <Metric tone="amber" label="В работе" value={active} hint={active ? "Требуют контроля" : "Сейчас нет"} icon="clock" />
         <Metric tone="rose" label="Отменено" value={cancelled} hint={share(cancelled, todayOrders.length, "от заказов")} icon="cross" />
@@ -78,11 +93,11 @@ function AdminHome() {
       <section className="crm-panel p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-semibold">Воронка заказов</h2>
-          <p className="text-sm text-[#667085]">Открытые заказы по этапам · закрытые — только за сегодня</p>
+          <p className="text-sm text-[#667085]">Открытые заказы по этапам · закрытые — за выбранный период</p>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
           {[...openFunnel, ...closedToday].map((item) => (
-            <Link key={item.status} href="/orders" className="rounded-lg border border-[#e6e8ec] bg-[#f8fafc] px-3 py-3 hover:border-[#c5d4e8]">
+            <Link key={item.status} href="/orders" className="rounded-lg border border-[#e6e8ec] bg-[#f8fafc] px-3 py-3 text-[#1f2933] hover:border-[#c5d4e8] hover:text-[#1f2933]">
               <p className="text-xs text-[#667085]">{ORDER_STATUS_LABEL[item.status]}</p>
               <p className="mt-1 text-2xl font-semibold tabular-nums">{item.count}</p>
             </Link>
@@ -157,15 +172,15 @@ function AdminHome() {
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <section className="crm-panel min-w-0 p-4">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="font-semibold">Заказы по часам</h2>
-            <span className="text-sm text-[#667085]">Сегодня, 08:00–20:00</span>
+            <h2 className="font-semibold">Регистрации по часам</h2>
+            <span className="text-sm text-[#667085]">{bounds.label} · 08:00–20:00</span>
           </div>
-          <HourChart points={points} />
+          <HourChart points={points} periodLabel={bounds.label} />
           <p className="mt-2 text-xs text-[#667085]">
-            Только заказы, созданные сегодня.
+            Показываются регистрации за выбранный период.
             {outsideHours
-              ? ` ${outsideHours} ${outsideHours === 1 ? "заказ создан" : "заказа создано"} вне 08:00–20:00, поэтому на линии их нет.`
-              : " Нулевая линия означает, что в эти часы заказов не было."}
+              ? ` ${outsideHours} ${outsideHours === 1 ? "регистрация создана" : "регистрации созданы"} вне 08:00–20:00, поэтому на линии их нет.`
+              : " Нулевая линия означает, что в эти часы регистраций не было."}
           </p>
         </section>
         <section className="crm-panel">
@@ -189,7 +204,7 @@ function AdminHome() {
 }
 
 function share(part: number, total: number, tail: string) {
-  if (!total) return "Заказов сегодня нет";
+  if (!total) return "Нет данных за период";
   const percent = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 }).format((part / total) * 100);
   return `${percent}% ${tail}`;
 }
@@ -227,10 +242,10 @@ function Metric({
   icon: "orders" | "check" | "clock" | "cross";
 }) {
   const palette = {
-    blue: ["bg-[#e8f1fb]", "text-[#1d5fa7]"],
-    green: ["bg-[#e7f6ee]", "text-[#1f7a45]"],
-    amber: ["bg-[#fff4e5]", "text-[#c05621]"],
-    rose: ["bg-[#fdecec]", "text-[#c24141]"],
+    blue: ["border border-[#d9e8fb] bg-[#f4f8ff]", "text-[#2563eb]"],
+    green: ["border border-[#d4f2e6] bg-[#f2fbf7]", "text-[#07885f]"],
+    amber: ["border border-[#f5e3b8] bg-[#fffaf0]", "text-[#b7791f]"],
+    rose: ["border border-[#f5d6dc] bg-[#fff6f7]", "text-[#d1435b]"],
   }[tone];
   return (
     <article className={`flex min-w-0 items-start justify-between rounded-[10px] px-4 py-4 ${palette[0]}`}>
@@ -260,7 +275,7 @@ function MetricIcon({ name }: { name: "orders" | "check" | "clock" | "cross" }) 
   );
 }
 
-function HourChart({ points }: { points: number[] }) {
+function HourChart({ points, periodLabel }: { points: number[]; periodLabel: string }) {
   const max = Math.max(1, ...points);
   const ticks = max <= 1 ? [0, 1] : [0, Math.round(max / 2), max];
   const coords = points.map((value, index) => {
@@ -280,7 +295,7 @@ function HourChart({ points }: { points: number[] }) {
           ))}
         </div>
         <div className="relative h-40 min-w-0 flex-1">
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full" role="img" aria-label="Заказы по часам за сегодня">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full" role="img" aria-label={`Регистрации по часам за ${periodLabel.toLowerCase()}`}>
             {ticks.map((tick) => {
               const y = 100 - (tick / max) * 100;
               return <line key={tick} x1="0" x2="100" y1={y} y2={y} stroke="#e6e8ec" vectorEffect="non-scaling-stroke" />;
