@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { allows } from "@/lib/access";
 import { fullName, ROLE_LABEL } from "@/lib/labels";
@@ -16,12 +16,12 @@ type NavItem = { href: string; label: string; icon: IconName };
 
 const ADMIN_NAV: NavItem[] = [
   { href: "/", label: "Панель руководителя", icon: "home" },
-  { href: "/recruitment", label: "Рекрутинг", icon: "chart" },
-  { href: "/drivers", label: "Водители", icon: "users" },
+  // { href: "/recruitment", label: "Рекрутинг", icon: "chart" },
+  { href: "/drivers", label: "Диспетчеры", icon: "users" },
   { href: "/orders", label: "Заказы", icon: "orders" },
   { href: "/chats", label: "Чаты", icon: "chat" },
   { href: "/sources", label: "Источники", icon: "source" },
-  { href: "/employees", label: "Диспетчеры", icon: "users" },
+  { href: "/employees", label: "Водители", icon: "users" },
   { href: "/time", label: "Рабочее время", icon: "clock" },
   { href: "/analytics", label: "Аналитика", icon: "chart" },
   { href: "/audit", label: "Журнал", icon: "list" },
@@ -39,12 +39,12 @@ const DISPATCHER_NAV: NavItem[] = [
 
 const TITLES: Record<string, string> = {
   "/": "Панель администратора",
-  "/orders": "Заказы",
-  "/drivers": "Водители",
-  "/recruitment": "Рекрутинг",
+  "/orders": "Воронка",
+  "/drivers": "Диспетчеры",
+  // "/recruitment": "Рекрутинг",
   "/chats": "Чаты",
   "/sources": "Источники",
-  "/employees": "Диспетчеры",
+  "/employees": "Водители",
   "/time": "Рабочее время",
   "/analytics": "Аналитика",
   "/audit": "Журнал",
@@ -71,6 +71,8 @@ const TITLES: Record<string, string> = {
 export function Frame({ children }: { children: React.ReactNode }) {
   const crm = useCrm();
   const pathname = usePathname();
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const driverCard = pathname === "/drivers" && Boolean(useSearchParams().get("id"));
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [notices, setNotices] = useState(false);
@@ -87,7 +89,9 @@ export function Frame({ children }: { children: React.ReactNode }) {
 
   const pageTitle = pathname === "/"
     ? (!crm.actor ? "Акжол" : crm.isAdmin ? "Панель администратора" : "Рабочее место диспетчера")
-    : (TITLES[pathname] ?? "Акжол");
+    : pathname === "/drivers"
+      ? (crm.isAdmin && !driverCard ? "Диспетчеры" : "Водители")
+      : (TITLES[pathname] ?? "Акжол");
 
   useEffect(() => {
     document.title = `${pageTitle} — Akjol CRM`;
@@ -152,7 +156,9 @@ export function Frame({ children }: { children: React.ReactNode }) {
         </div>
         <nav className="flex-1 overflow-auto px-2 py-2">
           {nav.map((item) => {
-            const active = item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const active = crm.isAdmin && driverCard
+              ? item.href === "/employees"
+              : item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
                 key={item.href}

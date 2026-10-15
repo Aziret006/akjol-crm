@@ -315,15 +315,15 @@ export function ManagerDashboard() {
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Situation tone="green" label="На смене сейчас" value={`${shifts.onShift} / ${staff.length}`} hint={staff.length ? `${onShiftShare}% на месте` : "Диспетчеров нет"} href="/time" />
             <Situation tone="blue" label="В активных звонках" value={String(telephony.status.active.length)} hint={telephony.status.connected ? `Очередь: ${telephony.status.queueCount}` : "Телефония не подключена"} href="/telephony" />
-            <Situation tone="amber" label="Требуют внимания" value={String(callback.length)} hint={callback.length ? "Нужно перезвонить" : "Новых заявок нет"} href="/drivers" />
-            <Situation tone="rose" label="Проблемные" value={String(problematic.length)} hint={problematic.length ? "Документы / СРМК / остановлены" : "Таких заявок нет"} href="/drivers" />
+            <Situation tone="amber" label="Требуют внимания" value={String(callback.length)} hint={callback.length ? "Нужно перезвонить" : "Новых заявок нет"} href="/employees" />
+            <Situation tone="rose" label="Проблемные" value={String(problematic.length)} hint={problematic.length ? "Документы / СРМК / остановлены" : "Таких заявок нет"} href="/employees" />
           </div>
         </section>
 
         <section className="crm-panel min-w-0">
           <div className="flex items-center justify-between border-b border-[#e6e8ec] px-4 py-3">
             <h3 className="font-semibold">Последние регистрации</h3>
-            <Link href="/drivers" className="text-xs text-[#1d5fa7]">Все</Link>
+            <Link href="/employees" className="text-xs text-[#1d5fa7]">Все</Link>
           </div>
           {recent.length === 0 ? <p className="px-4 py-4 text-sm text-[#667085]">Заявок нет</p> : (
             <ul>
@@ -333,7 +333,7 @@ export function ManagerDashboard() {
                   <li key={driver.id} className="grid grid-cols-[52px_minmax(0,1fr)_auto] items-center gap-2 border-t border-[#e6e8ec] px-4 py-2 text-sm">
                     <span className="text-xs text-[#98a2b3]">{formatTime(driver.createdAt)}</span>
                     <span className="min-w-0">
-                      <Link href="/drivers" className="block truncate font-medium hover:text-[#1d5fa7]">{fullName(driver)}</Link>
+                      <Link href={`/drivers?id=${driver.id}`} className="block truncate font-medium hover:text-[#1d5fa7]">{fullName(driver)}</Link>
                       <span className="block truncate text-xs text-[#667085]">{owner ? shortName(owner.firstName, owner.lastName) : "Без диспетчера"} · {STAGE_LABEL[driver.stage]}</span>
                     </span>
                     <StageBadge stage={driver.stage} />
@@ -347,7 +347,7 @@ export function ManagerDashboard() {
         <section className="crm-panel min-w-0">
           <div className="flex items-center justify-between border-b border-[#e6e8ec] px-4 py-3">
             <h3 className="font-semibold">Задачи и уведомления</h3>
-            <Link href="/drivers" className="text-xs text-[#1d5fa7]">Все</Link>
+            <Link href="/employees" className="text-xs text-[#1d5fa7]">Все</Link>
           </div>
           {tasks.length === 0 ? <p className="px-4 py-4 text-sm text-[#667085]">Открытых задач по водителям нет</p> : (
             <ul>

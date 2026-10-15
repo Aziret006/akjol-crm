@@ -207,7 +207,7 @@ export function RecruitmentScreen() {
         <h3 className="font-semibold text-[#1f2933]">Связь</h3>
         <p className="mt-2">Телефония: {telephony.status.connected ? "провайдер отвечает" : "не подключена"}. Каскад «на месте» уже есть в сервере телефонии, но без провайдера звонки и пропущенные не создаются.</p>
         <p className="mt-1">WhatsApp и оценка 1–5 после диалога не отправляются. Akjol Drive, баланс и выводы на банки не подключены — сумм оттуда нет.</p>
-        <p className="mt-2"><Link href="/drivers" className="text-[#1d5fa7]">Карточки водителей</Link></p>
+        <p className="mt-2"><Link href="/employees" className="text-[#1d5fa7]">Карточки водителей</Link></p>
       </section>
     </div>
   );

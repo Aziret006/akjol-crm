@@ -170,7 +170,7 @@ function DriverCard({ id }: { id: string }) {
   const [score, setScore] = useState("5");
   if (!user) return null;
   if (!driver || !canSeeDriver(driver, user.id, allows(user.role, "drivers.view_all"))) {
-    return <p className="text-sm text-[#667085]">Карточка недоступна. <Link href="/drivers" className="text-[#1d5fa7]">К списку</Link></p>;
+    return <p className="text-sm text-[#667085]">Карточка недоступна. <Link href={crm.isAdmin ? "/employees" : "/drivers"} className="text-[#1d5fa7]">К списку</Link></p>;
   }
   const editable = !crm.readOnly && canEditDriver(driver, user.id, allows(user.role, "drivers.view_all"));
   const owner = crm.state.users.find((item) => item.id === driver.ownerId);
@@ -184,7 +184,7 @@ function DriverCard({ id }: { id: string }) {
 
   return (
     <div className="space-y-3">
-      <Link href="/drivers" className="text-sm text-[#1d5fa7]">← Все водители</Link>
+      <Link href={crm.isAdmin ? "/employees" : "/drivers"} className="text-sm text-[#1d5fa7]">← Все водители</Link>
       <ErrorText>{error}</ErrorText>
       <section className="crm-panel p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">

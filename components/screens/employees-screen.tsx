@@ -46,7 +46,7 @@ const emptyForm: UserInput = {
   scheduleStart: "09:00",
 };
 
-const fieldClass = `${controlClass} !border-[#2a3b58] !bg-[#0e1728] !text-[#e8eef8]`;
+const fieldClass = controlClass;
 
 export function EmployeesScreen() {
   const crm = useCrm();
@@ -157,29 +157,29 @@ export function EmployeesScreen() {
   }
 
   return (
-    <div className="space-y-4 rounded-2xl bg-[#0b1220] p-4 text-[#e8eef8]">
+    <div className="space-y-4">
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <section className="min-w-0 rounded-xl border border-[#1e2d48] bg-[#121a2b]">
-          <div className="flex flex-wrap items-center gap-2 border-b border-[#1e2d48] px-4 py-3">
+        <section className="min-w-0 rounded-xl border border-[#e6e8ec] bg-white">
+          <div className="flex flex-wrap items-center gap-2 border-b border-[#e6e8ec] px-4 py-3">
             <h2 className="mr-auto text-base font-semibold whitespace-nowrap">Эффективность диспетчеров</h2>
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по имени диспетчера…" className="h-8 w-52 rounded-lg border !border-[#2a3b58] !bg-[#0e1728] px-3 text-sm !text-[#e8eef8] outline-none placeholder:text-[#7d8eab]" />
-            <select value={status} onChange={(event) => setStatus(event.target.value as WorkStatus | "all")} className="h-8 rounded-lg border !border-[#2a3b58] !bg-[#0e1728] px-2 text-sm !text-[#e8eef8]">
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по имени диспетчера…" className="h-8 w-52 rounded-lg border !border-[#e6e8ec] !bg-[#ffffff] px-3 text-sm !text-[#1f2933] outline-none placeholder:text-[#98a2b3]" />
+            <select value={status} onChange={(event) => setStatus(event.target.value as WorkStatus | "all")} className="h-8 rounded-lg border !border-[#e6e8ec] !bg-[#ffffff] px-2 text-sm !text-[#1f2933]">
               <option value="all">Все статусы</option>
               <option value="working">На месте</option>
               <option value="away">Отошёл</option>
               <option value="idle">Не на смене</option>
               <option value="finished">Закончил</option>
             </select>
-            <select value={shift} onChange={(event) => setShift(event.target.value)} className="h-8 rounded-lg border !border-[#2a3b58] !bg-[#0e1728] px-2 text-sm !text-[#e8eef8]">
+            <select value={shift} onChange={(event) => setShift(event.target.value)} className="h-8 rounded-lg border !border-[#e6e8ec] !bg-[#ffffff] px-2 text-sm !text-[#1f2933]">
               <option value="all">Все смены</option>
               {shifts.map((item) => <option key={item} value={item}>{item === "без графика" ? item : `Смена ${item}`}</option>)}
             </select>
-            <button type="button" onClick={exportRows} className="h-8 rounded-lg border border-[#2a3b58] px-3 text-xs text-[#d5deee] hover:bg-[#1a2740]">Экспорт</button>
+            <button type="button" onClick={exportRows} className="h-8 rounded-lg border border-[#e6e8ec] px-3 text-xs text-[#52606d] hover:bg-[#f4f6f8]">Экспорт</button>
             <button type="button" onClick={() => { setError(""); setForm({ ...emptyForm }); }} className="h-8 rounded-lg bg-[#2563eb] px-3 text-xs font-medium text-white hover:bg-[#1d4ed8]">Добавить</button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[980px] text-left text-sm">
-              <thead className="text-xs text-[#8ea0bd]">
+              <thead className="text-xs text-[#667085]">
                 <tr>
                   {["#", "Диспетчер", "Статус", "Зарег. водителей", "Активных", "1-й заказ", "Конверсия", "Раб. время", "Среднее время до 1-го заказа"].map((title) => (
                     <th key={title} className="px-3 py-2 font-medium">{title}</th>
@@ -188,32 +188,32 @@ export function EmployeesScreen() {
               </thead>
               <tbody>
                 {visible.length === 0 ? (
-                  <tr><td colSpan={9} className="px-3 py-8 text-[#8ea0bd]">Нет диспетчеров по этому фильтру</td></tr>
+                  <tr><td colSpan={9} className="px-3 py-8 text-[#667085]">Нет диспетчеров по этому фильтру</td></tr>
                 ) : visible.map((row, index) => (
-                  <tr key={row.user.id} className="border-t border-[#1e2d48]">
-                    <td className="px-3 py-3 tabular-nums text-[#8ea0bd]">{index + 1}</td>
+                  <tr key={row.user.id} className="border-t border-[#e6e8ec]">
+                    <td className="px-3 py-3 tabular-nums text-[#667085]">{index + 1}</td>
                     <td className="px-3 py-3">
                       <span className="flex items-center gap-2">
                         <Avatar name={fullName(row.user)} id={row.user.id} />
                         <span>
-                          <Link href={`/profile?user=${row.user.id}`} className="font-medium whitespace-nowrap hover:text-white">{shortName(row.user.firstName, row.user.lastName)}</Link>
-                          <span className="block text-xs text-[#8ea0bd]">{row.user.login}</span>
+                          <Link href={`/profile?user=${row.user.id}`} className="font-medium whitespace-nowrap hover:text-[#1d5fa7]">{shortName(row.user.firstName, row.user.lastName)}</Link>
+                          <span className="block text-xs text-[#667085]">{row.user.login}</span>
                         </span>
                       </span>
                     </td>
                     <td className="px-3 py-3"><StatusPill status={row.status} blocked={row.user.accountStatus === "blocked"} /></td>
                     <td className="px-3 py-3">
                       <span className="block text-base font-semibold tabular-nums">{row.registered}</span>
-                      <span className={`text-xs ${row.registeredToday ? "text-[#3ddc97]" : "text-[#8ea0bd]"}`}>{row.registeredToday ? `+${row.registeredToday} сегодня` : "сегодня 0"}</span>
+                      <span className={`text-xs ${row.registeredToday ? "text-[#3ddc97]" : "text-[#667085]"}`}>{row.registeredToday ? `+${row.registeredToday} сегодня` : "сегодня 0"}</span>
                     </td>
                     <td className="px-3 py-3">
                       <span className="block font-semibold tabular-nums">{row.active}</span>
-                      <span className="text-xs text-[#8ea0bd]">{row.registered ? `${row.activeShare}%` : "—"}</span>
+                      <span className="text-xs text-[#667085]">{row.registered ? `${row.activeShare}%` : "—"}</span>
                     </td>
                     <td className="px-3 py-3 text-base font-semibold tabular-nums">{row.first}</td>
                     <td className="px-3 py-3">
                       <span className="flex items-center gap-2">
-                        <span className="h-1.5 w-16 overflow-hidden rounded-full bg-[#243248]">
+                        <span className="h-1.5 w-16 overflow-hidden rounded-full bg-[#eef1f4]">
                           <span className="block h-full rounded-full" style={{ width: `${row.conversion}%`, background: conversionColor(row.conversion) }} />
                         </span>
                         <span className="tabular-nums">{row.registered ? `${row.conversion}%` : "—"}</span>
@@ -222,7 +222,7 @@ export function EmployeesScreen() {
                     <td className="px-3 py-3 whitespace-nowrap tabular-nums">{formatDuration(row.worked)}</td>
                     <td className="px-3 py-3">
                       <span className="tabular-nums">{formatHours(row.avgHours)}</span>
-                      <button type="button" className="ml-3 text-xs text-[#7dd3fc]" onClick={() => edit(row.user.id)}>Изменить</button>
+                      <button type="button" className="ml-3 text-xs text-[#1d5fa7]" onClick={() => edit(row.user.id)}>Изменить</button>
                     </td>
                   </tr>
                 ))}
@@ -232,25 +232,25 @@ export function EmployeesScreen() {
         </section>
 
         <div className="space-y-4">
-          <section className="rounded-xl border border-[#1e2d48] bg-[#121a2b] p-4">
+          <section className="rounded-xl border border-[#e6e8ec] bg-white p-4">
             <div className="flex items-center justify-between gap-2">
               <h2 className="font-semibold">Топ-диспетчеры</h2>
-              <select value={days} onChange={(event) => setDays(Number(event.target.value) as 7 | 14 | 30)} className="h-8 rounded-lg border !border-[#2a3b58] !bg-[#0e1728] px-2 text-xs !text-[#e8eef8]">
+              <select value={days} onChange={(event) => setDays(Number(event.target.value) as 7 | 14 | 30)} className="h-8 rounded-lg border !border-[#e6e8ec] !bg-[#ffffff] px-2 text-xs !text-[#1f2933]">
                 <option value={7}>7 дней</option>
                 <option value={14}>14 дней</option>
                 <option value={30}>За месяц</option>
               </select>
             </div>
-            <p className="mt-1 text-xs text-[#8ea0bd]">по 1-м заказам · {periodLabel.toLowerCase()}</p>
-            {top.length === 0 ? <p className="mt-3 text-sm text-[#8ea0bd]">Диспетчеров нет</p> : (
+            <p className="mt-1 text-xs text-[#667085]">по 1-м заказам · {periodLabel.toLowerCase()}</p>
+            {top.length === 0 ? <p className="mt-3 text-sm text-[#667085]">Диспетчеров нет</p> : (
               <ol className="mt-3 space-y-3">
                 {top.map((row, index) => (
                   <li key={row.user.id} className="grid grid-cols-[18px_28px_minmax(0,1fr)_28px] items-center gap-2 text-sm">
-                    <span className="text-xs text-[#8ea0bd]">{index + 1}</span>
+                    <span className="text-xs text-[#667085]">{index + 1}</span>
                     <Avatar name={fullName(row.user)} id={row.user.id} />
                     <span className="min-w-0">
                       <span className="block truncate">{shortName(row.user.firstName, row.user.lastName)}</span>
-                      <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-[#243248]">
+                      <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-[#eef1f4]">
                         <span className="block h-full rounded-full" style={{ width: `${Math.max(row.first ? 8 : 0, (row.first / topMax) * 100)}%`, background: TOP_COLOR[index] ?? "#22c55e" }} />
                       </span>
                     </span>
@@ -261,20 +261,20 @@ export function EmployeesScreen() {
             )}
           </section>
 
-          <section className="rounded-xl border border-[#1e2d48] bg-[#121a2b] p-4">
+          <section className="rounded-xl border border-[#e6e8ec] bg-white p-4">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold">Источники заявок</h2>
-              <span className="text-xs text-[#8ea0bd]">{periodLabel}</span>
+              <span className="text-xs text-[#667085]">{periodLabel}</span>
             </div>
-            {sourceTotal === 0 ? <p className="mt-3 text-sm text-[#8ea0bd]">В этом периоде заявок нет</p> : (
+            {sourceTotal === 0 ? <p className="mt-3 text-sm text-[#667085]">В этом периоде заявок нет</p> : (
               <div className="mt-3 flex items-center gap-3">
                 <Donut total={sourceTotal} slices={sources.map((item) => ({ value: item.count, color: SOURCE_COLOR[item.source] }))} />
                 <ul className="min-w-0 flex-1 space-y-1.5 text-sm">
                   {sources.map((item) => (
                     <li key={item.source} className="flex items-center gap-2">
                       <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: SOURCE_COLOR[item.source] }} />
-                      <span className="min-w-0 flex-1 truncate text-[#d5deee]">{SOURCE_LEAD_LABEL[item.source]}</span>
-                      <span className="tabular-nums text-[#8ea0bd]">{Math.round((item.count / sourceTotal) * 100)}%</span>
+                      <span className="min-w-0 flex-1 truncate text-[#52606d]">{SOURCE_LEAD_LABEL[item.source]}</span>
+                      <span className="tabular-nums text-[#667085]">{Math.round((item.count / sourceTotal) * 100)}%</span>
                       <span className="w-6 text-right tabular-nums">{item.count}</span>
                     </li>
                   ))}
@@ -286,36 +286,36 @@ export function EmployeesScreen() {
       </div>
 
       <div className="grid items-start gap-4 lg:grid-cols-[240px_minmax(0,1fr)_280px]">
-        <section className="rounded-xl border border-[#1e2d48] bg-[#121a2b] p-4">
+        <section className="rounded-xl border border-[#e6e8ec] bg-white p-4">
           <h2 className="font-semibold">Текущая ситуация</h2>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Situation tone="green" label="Работают сейчас" value={`${live.onShift} / ${activeStaff.length}`} hint={activeStaff.length ? `${onShiftShare}% на месте` : "Диспетчеров нет"} href="/time" />
             <Situation tone="blue" label="В активных звонках" value={String(telephony.status.active.length)} hint={telephony.status.connected ? `очередь ${telephony.status.queueCount}` : "Телефония не подключена"} href="/telephony" />
-            <Situation tone="amber" label="Требуют внимания" value={String(callback.length)} hint={callback.length ? "Нужно перезвонить" : "Новых заявок нет"} href="/drivers" />
-            <Situation tone="rose" label="Проблемные" value={String(problematic.length)} hint={problematic.length ? "Документы / СРМК" : "Таких заявок нет"} href="/drivers" />
+            <Situation tone="amber" label="Требуют внимания" value={String(callback.length)} hint={callback.length ? "Нужно перезвонить" : "Новых заявок нет"} href="/employees" />
+            <Situation tone="rose" label="Проблемные" value={String(problematic.length)} hint={problematic.length ? "Документы / СРМК" : "Таких заявок нет"} href="/employees" />
           </div>
         </section>
 
-        <section className="min-w-0 rounded-xl border border-[#1e2d48] bg-[#121a2b]">
-          <div className="flex items-center justify-between border-b border-[#1e2d48] px-4 py-3">
+        <section className="min-w-0 rounded-xl border border-[#e6e8ec] bg-white">
+          <div className="flex items-center justify-between border-b border-[#e6e8ec] px-4 py-3">
             <h2 className="font-semibold">Последние регистрации</h2>
-            <Link href="/drivers" className="text-xs text-[#7dd3fc]">Все</Link>
+            <Link href="/employees" className="text-xs text-[#1d5fa7]">Все</Link>
           </div>
-          {recent.length === 0 ? <p className="px-4 py-4 text-sm text-[#8ea0bd]">Заявок нет</p> : (
+          {recent.length === 0 ? <p className="px-4 py-4 text-sm text-[#667085]">Заявок нет</p> : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[520px] text-left text-sm">
-                <thead className="text-xs text-[#8ea0bd]">
+                <thead className="text-xs text-[#667085]">
                   <tr>{["Время", "Водитель", "Диспетчер", "Этап", "Статус"].map((title) => <th key={title} className="px-3 py-2 font-medium">{title}</th>)}</tr>
                 </thead>
                 <tbody>
                   {recent.map((driver) => {
                     const owner = crm.state.users.find((user) => user.id === driver.ownerId);
                     return (
-                      <tr key={driver.id} className="border-t border-[#1e2d48]">
-                        <td className="px-3 py-2 text-xs text-[#8ea0bd]">{formatTime(driver.createdAt)}</td>
-                        <td className="px-3 py-2"><Link href="/drivers" className="hover:text-white">{fullName(driver)}</Link></td>
-                        <td className="px-3 py-2 text-[#d5deee]">{owner ? shortName(owner.firstName, owner.lastName) : "—"}</td>
-                        <td className="px-3 py-2 text-[#d5deee]">{STAGE_LABEL[driver.stage]}</td>
+                      <tr key={driver.id} className="border-t border-[#e6e8ec]">
+                        <td className="px-3 py-2 text-xs text-[#667085]">{formatTime(driver.createdAt)}</td>
+                        <td className="px-3 py-2"><Link href={`/drivers?id=${driver.id}`} className="hover:text-[#1d5fa7]">{fullName(driver)}</Link></td>
+                        <td className="px-3 py-2 text-[#52606d]">{owner ? shortName(owner.firstName, owner.lastName) : "—"}</td>
+                        <td className="px-3 py-2 text-[#52606d]">{STAGE_LABEL[driver.stage]}</td>
                         <td className="px-3 py-2"><StageMark stage={driver.stage} /></td>
                       </tr>
                     );
@@ -326,19 +326,19 @@ export function EmployeesScreen() {
           )}
         </section>
 
-        <section className="rounded-xl border border-[#1e2d48] bg-[#121a2b]">
-          <div className="flex items-center justify-between border-b border-[#1e2d48] px-4 py-3">
+        <section className="rounded-xl border border-[#e6e8ec] bg-white">
+          <div className="flex items-center justify-between border-b border-[#e6e8ec] px-4 py-3">
             <h2 className="font-semibold">Задачи и уведомления</h2>
-            <span className="rounded-full bg-[#243248] px-2 py-0.5 text-xs tabular-nums text-[#d5deee]">{tasks.length}</span>
+            <span className="rounded-full bg-[#eef1f4] px-2 py-0.5 text-xs tabular-nums text-[#52606d]">{tasks.length}</span>
           </div>
-          {tasks.length === 0 ? <p className="px-4 py-4 text-sm text-[#8ea0bd]">Открытых задач нет</p> : (
+          {tasks.length === 0 ? <p className="px-4 py-4 text-sm text-[#667085]">Открытых задач нет</p> : (
             <ul>
               {tasks.slice(0, 6).map((task) => (
-                <li key={task.id} className="flex items-start gap-2 border-t border-[#1e2d48] px-4 py-2.5 text-sm">
+                <li key={task.id} className="flex items-start gap-2 border-t border-[#e6e8ec] px-4 py-2.5 text-sm">
                   <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${task.tone === "rose" ? "bg-[#f43f5e]" : task.tone === "amber" ? "bg-[#f59e0b]" : "bg-[#22c55e]"}`} />
                   <span className="min-w-0">
                     <span className="block truncate">{task.title}</span>
-                    <span className="block text-xs text-[#8ea0bd]">{formatTime(task.at)} · {task.meta}</span>
+                    <span className="block text-xs text-[#667085]">{formatTime(task.at)} · {task.meta}</span>
                   </span>
                 </li>
               ))}
@@ -439,13 +439,13 @@ function conversionColor(value: number) {
 }
 
 function StatusPill({ status, blocked }: { status: WorkStatus; blocked: boolean }) {
-  if (blocked) return <span className="rounded-full bg-[#3b1d2a] px-2 py-0.5 text-xs text-[#fda4af]">Заблокирован</span>;
+  if (blocked) return <span className="rounded-full bg-[#fff1f2] px-2 py-0.5 text-xs text-[#d1435b]">Заблокирован</span>;
   const label = status === "working" ? "На месте" : status === "away" ? "Отошёл" : WORK_LABEL[status];
   const tone = status === "working"
-    ? "bg-[#123d32] text-[#3ddc97]"
+    ? "bg-[#e7f6ee] text-[#1f7a45]"
     : status === "away"
-      ? "bg-[#3d3014] text-[#f5c16c]"
-      : "bg-[#243248] text-[#8ea0bd]";
+      ? "bg-[#fff4e5] text-[#b45309]"
+      : "bg-[#f4f6f8] text-[#667085]";
   return <span className={`rounded-full px-2 py-0.5 text-xs ${tone}`}>{label}</span>;
 }
 
@@ -468,7 +468,7 @@ function Donut({ total, slices }: { total: number; slices: { value: number; colo
   let offset = 0;
   return (
     <svg viewBox="0 0 120 120" className="h-32 w-32 shrink-0" role="img" aria-label={`${total} заявок по источникам`}>
-      <circle cx="60" cy="60" r={radius} fill="none" stroke="#243248" strokeWidth="14" />
+      <circle cx="60" cy="60" r={radius} fill="none" stroke="#eef1f4" strokeWidth="14" />
       {slices.map((slice, index) => {
         const dash = (slice.value / total) * length;
         const node = (
@@ -477,22 +477,22 @@ function Donut({ total, slices }: { total: number; slices: { value: number; colo
         offset += dash;
         return node;
       })}
-      <text x="60" y="58" textAnchor="middle" fill="#e8eef8" fontSize="18" fontWeight="600">{total}</text>
-      <text x="60" y="74" textAnchor="middle" fill="#8ea0bd" fontSize="10">заявки</text>
+      <text x="60" y="58" textAnchor="middle" fill="#1f2933" fontSize="18" fontWeight="600">{total}</text>
+      <text x="60" y="74" textAnchor="middle" fill="#667085" fontSize="10">заявки</text>
     </svg>
   );
 }
 
 function Situation({ tone, label, value, hint, href }: { tone: "green" | "blue" | "amber" | "rose"; label: string; value: string; hint: string; href: string }) {
   const palette = {
-    green: "border-[#14532d] bg-[#10281c] text-[#3ddc97]",
-    blue: "border-[#1e3a8a] bg-[#101c33] text-[#7dd3fc]",
-    amber: "border-[#78350f] bg-[#2a2112] text-[#f5c16c]",
-    rose: "border-[#7f1d1d] bg-[#2a1418] text-[#fda4af]",
+    green: "border-[#d4f2e6] bg-[#f2fbf7] text-[#07885f]",
+    blue: "border-[#d9e8fb] bg-[#f4f8ff] text-[#2563eb]",
+    amber: "border-[#f5e3b8] bg-[#fffaf0] text-[#b7791f]",
+    rose: "border-[#f5d6dc] bg-[#fff6f7] text-[#d1435b]",
   }[tone];
   return (
     <Link href={href} className={`rounded-lg border px-3 py-2 ${palette}`}>
-      <p className="text-xs text-[#d5deee]">{label}</p>
+      <p className="text-xs text-[#52606d]">{label}</p>
       <p className="mt-1 text-xl font-semibold tabular-nums">{value}</p>
       <p className="text-xs opacity-80">{hint}</p>
     </Link>
