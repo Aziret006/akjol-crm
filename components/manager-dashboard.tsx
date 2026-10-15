@@ -163,20 +163,8 @@ export function ManagerDashboard() {
 
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]">
         <section className="crm-panel p-4">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="font-semibold">Воронка регистрации водителей</h3>
-            <span className="text-xs text-[#98a2b3]">Вся база</span>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
-            {steps.map((step) => (
-              <div key={step.stage} className="rounded-lg bg-[#f4f8ff] px-3 py-3">
-                <p className="text-xs text-[#52606d]">{STAGE_LABEL[step.stage]}</p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums text-[#1d4ed8]">{step.count}</p>
-                <p className="text-xs text-[#667085]">{step.share}%</p>
-                {step.stage === "application" ? <p className="mt-1 text-xs text-[#98a2b3]">вход</p> : step.loss == null ? <p className="mt-1 text-xs text-[#98a2b3]">прошлый этап пуст</p> : <p className={`mt-1 text-xs ${step.loss > 0 ? "text-[#d1435b]" : "text-[#667085]"}`}>{step.loss > 0 ? `−${step.loss}%` : "0%"} к прошлому этапу</p>}
-              </div>
-            ))}
-          </div>
+          <h3 className="font-semibold">Конверсия по этапам</h3>
+          <Funnel steps={steps} />
         </section>
         <section className="crm-panel p-4">
           <div className="flex items-center justify-between gap-2">
@@ -431,6 +419,42 @@ function conversionColor(value: number) {
   if (value >= 70) return "#12a878";
   if (value >= 40) return "#d97706";
   return "#d1435b";
+}
+
+const FUNNEL_COLORS = ["#2f7bff", "#2a62d4", "#1e4ea8", "#163e84", "#14506e", "#0f7a4e"];
+
+function Funnel({ steps }: { steps: { stage: RecruitStage; count: number; loss: number | null }[] }) {
+  const base = steps[0]?.count ?? 0;
+  return (
+    <div className="mt-4 overflow-x-auto">
+      <div className="flex min-w-[760px]">
+        {steps.map((step, index) => {
+          const percent = base ? Math.round((step.count / base) * 100) : 0;
+          const drop = index > 0 && step.loss != null && step.loss > 0;
+          return (
+            <div key={step.stage} className="relative min-w-0 flex-1" style={{ marginLeft: index === 0 ? 0 : -18, zIndex: index + 1 }}>
+              <div
+                className="flex h-[92px] flex-col justify-center text-white"
+                style={{
+                  background: FUNNEL_COLORS[index] ?? FUNNEL_COLORS[FUNNEL_COLORS.length - 1],
+                  clipPath: index === 0
+                    ? "polygon(0 0, calc(100% - 18px) 0, 100% 50%, calc(100% - 18px) 100%, 0 100%)"
+                    : "polygon(0 0, calc(100% - 18px) 0, 100% 50%, calc(100% - 18px) 100%, 0 100%, 18px 50%)",
+                  paddingLeft: index === 0 ? 16 : 30,
+                  paddingRight: 24,
+                }}
+              >
+                <p className="text-[13px] leading-tight">{STAGE_LABEL[step.stage]}</p>
+                <p className="mt-1 text-[26px] font-semibold leading-none tabular-nums">{step.count}</p>
+                <p className="mt-1 text-xs text-white/75">{percent}%</p>
+              </div>
+              <p className={`mt-2 h-5 text-center text-sm font-medium ${drop ? "text-[#e11d48]" : "text-transparent"}`}>{drop ? `−${step.loss}%` : "0"}</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function Kpi({ tone, label, value, hint, bars }: { tone: "green" | "blue" | "violet" | "rose"; label: string; value: number; hint: string; bars: number[] }) {
