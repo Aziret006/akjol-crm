@@ -70,7 +70,11 @@ const TITLES: Record<string, string> = {
 
 function DriverCardProbe({ onChange }: { onChange: (value: boolean) => void }) {
   const pathname = usePathname();
-  const card = pathname === "/drivers" && Boolean(useSearchParams().get("id"));
+  const driverId = useSearchParams().get("id");
+  return <DriverCardNotify card={pathname === "/drivers" && Boolean(driverId)} onChange={onChange} />;
+}
+
+function DriverCardNotify({ card, onChange }: { card: boolean; onChange: (value: boolean) => void }) {
   useEffect(() => {
     onChange(card);
   }, [card, onChange]);

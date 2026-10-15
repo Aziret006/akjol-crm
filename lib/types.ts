@@ -167,6 +167,8 @@ export type Driver = {
   stageLog: StageMark[];
   pitchNoted: boolean;
   demo: boolean;
+  photos: string[];
+  carPhotos: string[];
 };
 
 export type DriverTask = {

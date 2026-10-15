@@ -213,7 +213,30 @@ export function OrdersScreen() {
             onSelect={(orderId) => { setSelectedId(orderId); setError(""); }}
             onDrag={setDraggingId}
             onMove={(orderId, status) => run(crm.setOrderStatus(orderId, status))}
-            onAdd={() => { setClient({ ...EMPTY_CLIENT }); setClientError(""); }}
+            onAdd={(status, name) => {
+              const result = crm.createOrder({
+                phone: "",
+                name,
+                pickup: "",
+                dropoff: "",
+                pickupAt: null,
+                comment: "",
+                passengers: null,
+                payment: null,
+                price: null,
+                source: "phone",
+                driverId: null,
+                vehicleNote: "",
+                conversationId: null,
+                callId: null,
+                idempotencyKey: crypto.randomUUID(),
+                confirmDuplicate: true,
+                intake: true,
+                draft: true,
+                status,
+              });
+              run(result);
+            }}
           />
         ) : rows.length === 0 ? <Empty title="Заказов нет" text="Создайте заказ по телефону или из обращения. Диспетчер видит свои заказы и общую очередь без водителя." /> : (
           <div className="overflow-x-auto crm-panel">

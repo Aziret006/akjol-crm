@@ -99,7 +99,12 @@ const DEMO_SOURCE: Record<string, LeadSource> = {
   "drv-azamat": "partner",
 };
 
-export function normalizeDriver(input: Driver): Driver {
+function photoList(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string" && item.startsWith("data:image/")).slice(0, 6);
+}
+
+export function normalizeDriver(input: Partial<Driver> & { id: string }): Driver {
   const demo = input.demo === true || (typeof input.note === "string" && input.note.includes("Демо"));
   const stage = isStage(input.stage) ? input.stage : (demo && DEMO_STAGE[input.id]) || "application";
   const docs = emptyDocs();
@@ -137,6 +142,8 @@ export function normalizeDriver(input: Driver): Driver {
     ownerId: input.ownerId || (demo ? DEMO_OWNER[input.id] ?? null : null),
     stageLog: log.length ? log : [{ stage, at: createdAt, actorId: null }],
     pitchNoted: Boolean(input.pitchNoted),
+    photos: photoList(input.photos),
+    carPhotos: photoList(input.carPhotos),
     demo,
     stopReason: isStop(input.stopReason) ? input.stopReason : input.id === "drv-azamat" && stage === "stopped" ? "car_problem" : null,
   };

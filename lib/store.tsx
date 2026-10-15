@@ -74,6 +74,8 @@ export type OrderInput = {
   idempotencyKey: string;
   confirmDuplicate: boolean;
   intake?: boolean;
+  draft?: boolean;
+  status?: OrderStatus;
 };
 
 export type UserInput = {
@@ -122,7 +124,7 @@ type CrmApi = {
   setDriverAvailability: (driverId: string, availability: DriverAvailability) => ActionResult;
   saveLead: (input: { firstName: string; lastName: string; phone: string; source: LeadSource; city: string }) => ActionResult;
   setRecruitStage: (driverId: string, stage: RecruitStage, reason?: StopReason | null, note?: string) => ActionResult;
-  saveDriverProfile: (driverId: string, patch: Partial<Pick<import("./types").Driver, "firstName" | "lastName" | "phone" | "city" | "address" | "citizenship" | "inn" | "licenseNumber" | "plate" | "carModel" | "carColor" | "carYear" | "carCategory" | "pitchNoted" | "note">>) => ActionResult;
+  saveDriverProfile: (driverId: string, patch: Partial<Pick<import("./types").Driver, "firstName" | "lastName" | "phone" | "city" | "address" | "citizenship" | "inn" | "licenseNumber" | "plate" | "carModel" | "carColor" | "carYear" | "carCategory" | "pitchNoted" | "note" | "photos" | "carPhotos">>) => ActionResult;
   setDriverDoc: (driverId: string, kind: DocKind, status: DocStatus) => ActionResult;
   addDriverNote: (driverId: string, text: string) => ActionResult;
   addDriverTask: (driverId: string, title: string, dueAt: string, priority: "normal" | "high") => ActionResult;
@@ -216,7 +218,11 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
       keepStoredState = false;
       return;
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      // Снимок слишком большой для хранилища браузера.
+    }
   }, [ready, state]);
 
   const api = useMemo<CrmApi>(() => {
@@ -704,10 +710,12 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
         if (!key) return fail("Не удалось сохранить заказ. Откройте форму ещё раз.");
         const existingKey = current.orders.find((order) => order.idempotencyKey === key);
         if (existingKey) return { ok: true, orderId: existingKey.id };
+        const draft = input.draft === true;
         const phone = input.phone.trim();
         const pickup = input.pickup.trim();
-        if (phone.replace(/\D/g, "").length < 6) return fail("Укажите телефон клиента");
-        if (pickup.length < 3) return fail("Укажите адрес подачи");
+        if (draft && input.name.trim().length < 2) return fail("Укажите имя клиента");
+        if (!draft && phone.replace(/\D/g, "").length < 6) return fail("Укажите телефон клиента");
+        if (!draft && pickup.length < 3) return fail("Укажите адрес подачи");
         if (input.passengers != null && (!Number.isInteger(input.passengers) || input.passengers < 1 || input.passengers > 8)) {
           return fail("Количество пассажиров: от 1 до 8");
         }
@@ -730,7 +738,8 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
         });
         const nowIso = new Date().toISOString();
         const orderId = uid();
-        const status: OrderStatus = driver ? "assigned" : input.intake ? "new" : "awaiting_driver";
+        const placed = input.status && input.status !== "done" && input.status !== "cancelled" ? input.status : null;
+        const status: OrderStatus = driver ? "assigned" : placed ?? (input.intake ? "new" : "awaiting_driver");
         const order: Order = {
           id: orderId,
           number: nextOrderNumber(current.orders),

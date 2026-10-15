@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { ORDER_HOLD_LABEL, ORDER_SOURCE_LABEL, fullName } from "@/lib/labels";
 import { canDropStatus, FUNNEL } from "@/lib/orders";
 import type { Customer, Driver, Order, OrderStatus } from "@/lib/types";
@@ -27,10 +28,10 @@ export function OrderBoard({
   onSelect: (orderId: string) => void;
   onDrag: (orderId: string | null) => void;
   onMove: (orderId: string, status: OrderStatus) => void;
-  onAdd: () => void;
+  onAdd: (status: OrderStatus, name: string) => void;
 }) {
   return (
-    <div className="flex gap-4 overflow-x-auto pb-2">
+    <div className="flex items-stretch gap-4 overflow-x-auto pb-2">
       {FUNNEL.map((status) => {
         const cards = orders.filter((order) => order.status === status);
         const sum = cards.reduce((total, order) => total + (order.price ?? 0), 0);
@@ -38,7 +39,7 @@ export function OrderBoard({
           <section
             key={status}
             id={`order-col-${status}`}
-            className={`w-64 shrink-0 ${activeStatus === status ? "rounded-xl ring-2 ring-[#e6b325]/70" : ""}`}
+            className={`flex w-64 shrink-0 flex-col ${activeStatus === status ? "rounded-xl ring-2 ring-[#e6b325]/70" : ""}`}
             onDragOver={(event) => {
               const dragging = orders.find((order) => order.id === draggingId);
               if (dragging && canDropStatus(dragging.status, status)) event.preventDefault();
@@ -61,12 +62,7 @@ export function OrderBoard({
               </div>
               <span className="text-sm tabular-nums text-[#667085]">{cards.length}</span>
             </div>
-            <div className="min-h-28 space-y-2">
-              {status === "new" && !readOnly ? (
-                <button type="button" onClick={onAdd} className="w-full rounded-xl border border-dashed border-[#d0d5dd] bg-white px-3 py-2 text-left text-sm text-[#52606d] hover:border-[#2e6db4]">
-                  + Карточка клиента
-                </button>
-              ) : null}
+            <div className="min-h-28 flex-1 space-y-2">
               {cards.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-[#e6e8ec] px-3 py-8 text-center text-xs text-[#98a2b3]">Перетащите заказ сюда</p>
               ) : null}
@@ -110,6 +106,9 @@ export function OrderBoard({
                 );
               })}
             </div>
+            {!readOnly && status !== "done" && status !== "cancelled" ? (
+              <ColumnAdd onAdd={(name) => onAdd(status, name)} />
+            ) : null}
           </section>
         );
       })}
@@ -127,6 +126,31 @@ const DOT: Record<OrderStatus, string> = {
   done: "#16a34a",
   cancelled: "#f97316",
 };
+
+function ColumnAdd({ onAdd }: { onAdd: (name: string) => void }) {
+  const [name, setName] = useState("");
+  return (
+    <form
+      className="mt-2 flex items-center gap-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const value = name.trim();
+        if (value.length < 2) return;
+        onAdd(value);
+        setName("");
+      }}
+    >
+      <input
+        className="h-9 min-w-0 flex-1 rounded-lg border border-[#e6e8ec] bg-white px-3 text-sm outline-none placeholder:text-[#98a2b3] focus:border-[#2e6db4]"
+        placeholder="Имя клиента..."
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+        aria-label="Имя клиента"
+      />
+      <button type="submit" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#2563eb] text-lg leading-none text-white hover:bg-[#1d4ed8]" aria-label="Добавить клиента">+</button>
+    </form>
+  );
+}
 
 function formatSom(value: number) {
   return `${new Intl.NumberFormat("ru-RU").format(value)} сом`;
