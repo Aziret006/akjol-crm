@@ -38,7 +38,7 @@ const DISPATCHER_NAV: NavItem[] = [
 ];
 
 const TITLES: Record<string, string> = {
-  "/": "Панель руководителя",
+  "/": "Панель администратора",
   "/orders": "Заказы",
   "/drivers": "Водители",
   "/recruitment": "Рекрутинг",
@@ -86,7 +86,7 @@ export function Frame({ children }: { children: React.ReactNode }) {
   }
 
   const pageTitle = pathname === "/"
-    ? (!crm.actor ? "Акжол" : crm.isAdmin ? "Панель руководителя" : "Рабочее место диспетчера")
+    ? (!crm.actor ? "Акжол" : crm.isAdmin ? "Панель администратора" : "Рабочее место диспетчера")
     : (TITLES[pathname] ?? "Акжол");
 
   useEffect(() => {

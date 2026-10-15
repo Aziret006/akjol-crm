@@ -49,6 +49,7 @@ export function ManagerDashboard() {
   const [days, setDays] = useState<(typeof PERIODS)[number]["days"]>(30);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<WorkStatus | "all">("all");
+  const [shift, setShift] = useState("all");
   if (!crm.now) return <p className="text-sm text-[#667085]">Загрузка…</p>;
 
   const today = bishkekDateString(new Date(crm.now));
@@ -84,21 +85,26 @@ export function ManagerDashboard() {
     for (const day of datesOf(window.from, window.to)) {
       worked += summarizeDate(crm.state.events, user.id, day, crm.now, user.scheduleStart).workedMs;
     }
+    const activeCount = owned.filter((driver) => isActive(driver)).length;
     return {
       user,
       status: currentStatus(crm.state.events, user.id, new Date(crm.now)),
       registered: owned.length,
-      active: owned.filter((driver) => isActive(driver)).length,
+      registeredToday: pool.filter((driver) => driver.ownerId === user.id && bishkekDateString(new Date(driver.createdAt)) === today).length,
+      active: activeCount,
+      activeShare: owned.length ? Math.round((activeCount / owned.length) * 100) : 0,
       first: brought.length,
       conversion: owned.length ? Math.round((brought.length / owned.length) * 100) : 0,
       worked,
       avgHours: hours.length ? hours.reduce((sum, value) => sum + value, 0) / hours.length : null,
     };
   }).sort((a, b) => b.first - a.first || b.registered - a.registered);
+  const shiftOptions = [...new Set(staff.map((user) => user.scheduleStart || "без графика"))];
   const visibleRows = rows.filter((row) => {
     const name = fullName(row.user).toLowerCase();
     if (query.trim() && !name.includes(query.trim().toLowerCase())) return false;
     if (status !== "all" && row.status !== status) return false;
+    if (shift !== "all" && (row.user.scheduleStart || "без графика") !== shift) return false;
     return true;
   });
   const top = [...rows].sort((a, b) => b.first - a.first).slice(0, 5);
@@ -137,7 +143,7 @@ export function ManagerDashboard() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Панель руководителя</h2>
+          {/* <h2 className="text-2xl font-semibold tracking-tight">Панель руководителя</h2> */}
           <p className="mt-1 max-w-3xl text-sm text-[#667085]">
             Общая ситуация по регистрации водителей, работе диспетчеров и конверсии в первый заказ.
           </p>
@@ -176,73 +182,84 @@ export function ManagerDashboard() {
       </div>
 
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="crm-panel min-w-0">
-          <div className="flex flex-wrap items-center gap-2 border-b border-[#e6e8ec] px-4 py-3">
+        <section className="crm-panel min-w-0 overflow-hidden bg-white text-[#1f2933]">
+          <div className="flex flex-wrap items-center gap-2 border-b border-[#e6e8ec] bg-white px-4 py-3">
             <h3 className="mr-auto font-semibold">Эффективность диспетчеров</h3>
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Поиск по имени"
-              className="h-8 w-40 rounded-lg border border-[#e6e8ec] bg-[#f7f8fa] px-2 text-sm outline-none focus:border-[#2e6db4]"
+              placeholder="Поиск по имени диспетчера…"
+              className="h-8 w-52 rounded-lg border border-[#e6e8ec] bg-white px-3 text-sm text-[#1f2933] outline-none placeholder:text-[#98a2b3]"
             />
-            <select value={status} onChange={(event) => setStatus(event.target.value as WorkStatus | "all")} className="h-8 rounded-lg border border-[#e6e8ec] bg-white px-2 text-sm">
+            <select value={status} onChange={(event) => setStatus(event.target.value as WorkStatus | "all")} className="h-8 rounded-lg border border-[#e6e8ec] bg-white px-2 text-sm text-[#1f2933]">
               <option value="all">Все статусы</option>
               <option value="working">На месте</option>
               <option value="away">Отошёл</option>
               <option value="idle">Не на смене</option>
               <option value="finished">Закончил</option>
             </select>
-            <div className="flex rounded-lg border border-[#e6e8ec] bg-white p-0.5">
-              {PERIODS.map((item) => (
-                <button key={item.days} type="button" onClick={() => setDays(item.days)} className={`rounded-md px-2 py-1 text-xs ${days === item.days ? "bg-[#e8f1fb] font-medium text-[#1d5fa7]" : "text-[#667085]"}`}>{item.label}</button>
-              ))}
-            </div>
-            <button type="button" onClick={exportRows} className="h-8 rounded-lg border border-[#e6e8ec] bg-white px-2 text-xs hover:bg-[#f4f6f8]">Экспорт</button>
+            <select value={shift} onChange={(event) => setShift(event.target.value)} className="h-8 rounded-lg border border-[#e6e8ec] bg-white px-2 text-sm text-[#1f2933]">
+              <option value="all">Все смены</option>
+              {shiftOptions.map((item) => <option key={item} value={item}>{item === "без графика" ? item : `Смена ${item}`}</option>)}
+            </select>
+            <select value={days} onChange={(event) => setDays(Number(event.target.value) as 7 | 14 | 30)} className="h-8 rounded-lg border border-[#e6e8ec] bg-white px-2 text-sm text-[#1f2933]">
+              {PERIODS.map((item) => <option key={item.days} value={item.days}>{item.days === 30 ? "За месяц" : item.label}</option>)}
+            </select>
+            <button type="button" onClick={exportRows} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#e6e8ec] bg-white px-3 text-xs text-[#52606d] hover:bg-[#f4f6f8]">
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden><path d="M12 4v10m0 0 3.5-3.5M12 14 8.5 10.5M5 18h14" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              Экспорт
+            </button>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-left text-sm">
-              <thead className="text-xs text-[#667085]">
+            <table className="w-full min-w-[980px] text-left text-sm">
+              <thead className="bg-white text-xs text-[#667085]">
                 <tr>
-                  {["#", "Диспетчер", "Статус", "Зарег.", "Активных", "1-й заказ", "Конверсия", "Раб. время", "До 1-го заказа"].map((title) => (
-                    <th key={title} className="px-3 py-2 font-medium">{title}</th>
+                  {["#", "Диспетчер", "Статус", "Зарег. водителей", "Активных", "1-й заказ", "Конверсия", "Раб. время", "Среднее время до 1-го заказа"].map((title) => (
+                    <th key={title} className="px-3 py-2.5 font-medium">{title}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {visibleRows.length === 0 ? (
-                  <tr><td colSpan={9} className="px-3 py-6 text-[#667085]">Нет диспетчеров по этому фильтру</td></tr>
+                  <tr><td colSpan={9} className="bg-white px-3 py-8 text-[#667085]">Нет диспетчеров по этому фильтру</td></tr>
                 ) : visibleRows.map((row, index) => (
-                  <tr key={row.user.id} className="border-t border-[#e6e8ec]">
-                    <td className="px-3 py-2 tabular-nums text-[#98a2b3]">{index + 1}</td>
-                    <td className="px-3 py-2">
-                      <span className="flex items-center gap-2">
+                  <tr key={row.user.id} className="border-t border-[#e6e8ec] bg-white">
+                    <td className="px-3 py-3 tabular-nums text-[#98a2b3]">{index + 1}</td>
+                    <td className="px-3 py-3">
+                      <span className="flex items-center gap-2.5">
                         <Avatar name={fullName(row.user)} id={row.user.id} />
                         <span>
-                          <span className="block font-medium">{fullName(row.user)}</span>
+                          <span className="block font-medium whitespace-nowrap">{`${row.user.firstName} ${row.user.lastName.slice(0, 1)}.`}</span>
                           <span className="block text-xs text-[#98a2b3]">{row.user.login}</span>
                         </span>
                       </span>
                     </td>
-                    <td className="px-3 py-2"><StatusPill status={row.status} /></td>
-                    <td className="px-3 py-2 tabular-nums">{row.registered}</td>
-                    <td className="px-3 py-2 tabular-nums">{row.active}</td>
-                    <td className="px-3 py-2 tabular-nums">{row.first}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-3"><DeskStatus status={row.status} /></td>
+                    <td className="px-3 py-3">
+                      <span className="block text-base font-semibold tabular-nums">{row.registered}</span>
+                      <span className={`text-xs ${row.registeredToday ? "text-[#07885f]" : "text-[#98a2b3]"}`}>{row.registeredToday ? `+${row.registeredToday} сегодня` : "сегодня 0"}</span>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className="block text-base font-semibold tabular-nums">{row.active}</span>
+                      <span className="text-xs text-[#98a2b3]">{row.registered ? `${row.activeShare}%` : "—"}</span>
+                    </td>
+                    <td className="px-3 py-3 text-base font-semibold tabular-nums">{row.first}</td>
+                    <td className="px-3 py-3">
                       <span className="flex items-center gap-2">
-                        <span className="h-1.5 w-14 overflow-hidden rounded-full bg-[#eef1f4]">
-                          <span className="block h-full rounded-full" style={{ width: `${row.conversion}%`, background: conversionColor(row.conversion) }} />
+                        <span className="h-2 w-16 overflow-hidden rounded-full bg-[#eef1f4]">
+                          <span className="block h-full rounded-full" style={{ width: `${row.registered ? row.conversion : 0}%`, background: conversionColor(row.conversion) }} />
                         </span>
                         <span className="tabular-nums">{row.registered ? `${row.conversion}%` : "—"}</span>
                       </span>
                     </td>
-                    <td className="px-3 py-2">{formatDuration(row.worked)}</td>
-                    <td className="px-3 py-2">{formatHours(row.avgHours)}</td>
+                    <td className="px-3 py-3 whitespace-nowrap tabular-nums">{formatDuration(row.worked)}</td>
+                    <td className="px-3 py-3 whitespace-nowrap">{formatHours(row.avgHours)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <p className="border-t border-[#e6e8ec] px-4 py-2 text-xs text-[#98a2b3]">Заявки и конверсия — за {periodLabel.toLowerCase()}. Статус и «на месте» берутся из текущей смены.</p>
+          <p className="border-t border-[#e6e8ec] bg-white px-4 py-2 text-xs text-[#98a2b3]">Заявки и конверсия — за {periodLabel.toLowerCase()}. Статус «на месте» берётся из текущей смены.</p>
         </section>
 
         <div className="space-y-4">
@@ -416,9 +433,19 @@ function shortName(first: string, last: string) {
 }
 
 function conversionColor(value: number) {
-  if (value >= 70) return "#12a878";
-  if (value >= 40) return "#d97706";
-  return "#d1435b";
+  if (value >= 70) return "#22c55e";
+  if (value >= 60) return "#eab308";
+  return "#f43f5e";
+}
+
+function DeskStatus({ status }: { status: WorkStatus }) {
+  const label = status === "working" ? "На месте" : status === "away" ? "Отошёл" : WORK_LABEL[status];
+  const tone = status === "working"
+    ? "bg-[#e7f6ee] text-[#1f7a45]"
+    : status === "away"
+      ? "bg-[#fff4e5] text-[#b45309]"
+      : "bg-[#f4f6f8] text-[#667085]";
+  return <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${tone}`}>{label}</span>;
 }
 
 const FUNNEL_COLORS = ["#2f7bff", "#2a62d4", "#1e4ea8", "#163e84", "#14506e", "#0f7a4e"];
@@ -528,6 +555,7 @@ function Donut({ total, slices }: { total: number; slices: { value: number; colo
             transform="rotate(-90 60 60)"
           />
         );
+        // eslint-disable-next-line react-hooks/immutability
         offset += dash;
         return node;
       })}
@@ -546,16 +574,6 @@ function Situation({ tone, label, value, hint, href }: { tone: "green" | "blue" 
       <p className="text-xs text-[#98a2b3]">{hint}</p>
     </Link>
   );
-}
-
-function StatusPill({ status }: { status: WorkStatus }) {
-  const label = status === "working" ? "На месте" : status === "away" ? "Отошёл" : WORK_LABEL[status];
-  const tone = status === "working"
-    ? "bg-[#e7f6ee] text-[#1f7a45]"
-    : status === "away"
-      ? "bg-[#fff4e5] text-[#b45309]"
-      : "bg-[#f4f6f8] text-[#667085]";
-  return <span className={`rounded-full px-2 py-0.5 text-xs ${tone}`}>{label}</span>;
 }
 
 function StageBadge({ stage }: { stage: RecruitStage }) {
