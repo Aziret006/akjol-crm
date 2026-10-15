@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { Suspense, useEffect, useState, useSyncExternalStore } from "react";
 import { allows } from "@/lib/access";
 import { fullName, ROLE_LABEL } from "@/lib/labels";
 import { visibleConversations } from "@/lib/metrics";
@@ -68,11 +68,19 @@ const TITLES: Record<string, string> = {
   "/login": "Вход",
 };
 
+function DriverCardProbe({ onChange }: { onChange: (value: boolean) => void }) {
+  const pathname = usePathname();
+  const card = pathname === "/drivers" && Boolean(useSearchParams().get("id"));
+  useEffect(() => {
+    onChange(card);
+  }, [card, onChange]);
+  return null;
+}
+
 export function Frame({ children }: { children: React.ReactNode }) {
   const crm = useCrm();
   const pathname = usePathname();
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const driverCard = pathname === "/drivers" && Boolean(useSearchParams().get("id"));
+  const [driverCard, setDriverCard] = useState(false);
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [notices, setNotices] = useState(false);
@@ -146,6 +154,9 @@ export function Frame({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={`h-dvh overflow-hidden bg-[#f7f8fa] md:grid ${wide}`}>
+      <Suspense fallback={null}>
+        <DriverCardProbe onChange={setDriverCard} />
+      </Suspense>
       {open ? <button className="fixed inset-0 z-30 bg-black/30 md:hidden" onClick={() => setOpen(false)} aria-label="Закрыть меню" /> : null}
       <aside className={`fixed inset-y-0 left-0 z-40 flex w-[232px] flex-col border-r border-[#e6e8ec] bg-white md:static md:w-auto ${open ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
         <div className={`flex h-14 items-center border-b border-[#e6e8ec] ${compact ? "justify-center px-2" : "gap-2 px-3"}`}>
